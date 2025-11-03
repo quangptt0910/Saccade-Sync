@@ -1,0 +1,14 @@
+{
+  "name": "SaccadeSync",
+  "version": "0.0.1",
+  "description": "Iris & Pupil Tracking with MediaPipe",
+  "main": "index.js",
+  "scripts": {
+    "start": "serve .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "private": true,
+  "dependencies": {
+    "serve": "^14.0.1"
+  }
+}

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calibration</title>
+</head>
+<body>
+<!-- Calibration Screen Component -->
+<section id="calibration-screen" class="screen" style="display:none">
+  <div class="calibration-container">
+    <header class="calibration-header">
+      <h2>📍 Eye Tracker Calibration</h2>
+      <p class="calibration-subtitle">Look at each dot and click when ready</p>
+      <div class="calibration-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" id="calibration-progress"></div>
+        </div>
+        <span id="calibration-counter">0/9</span>
+      </div>
+    </header>
+
+    <div class="calibration-area">
+      <!-- Video feed (hidden, only processing) -->
+      <video id="calibration-video" playsinline style="display:none;"></video>
+
+      <!-- Canvas for visualization -->
+      <canvas id="calibration-canvas" width="1280" height="720" class="calibration-canvas"></canvas>
+
+      <!-- Calibration dot (moves to 9 positions) -->
+      <div id="calibration-dot" class="calibration-dot">
+        <div class="dot-inner"></div>
+      </div>
+
+      <!-- Instructions -->
+      <div id="calibration-instructions" class="calibration-instructions">
+        <p id="instruction-text">Waiting to start...</p>
+      </div>
+    </div>
+
+    <!-- Calibration Controls -->
+    <div class="calibration-controls">
+      <div class="control-buttons">
+        <button id="calibration-start-btn" class="btn-primary">🎯 Start Calibration</button>
+        <button id="calibration-record-btn" class="btn-success" style="display:none;">✓ Record Sample</button>
+        <button id="calibration-skip-btn" class="btn-secondary" style="display:none;">⏭️ Skip Point</button>
+        <button id="calibration-complete-btn" class="btn-primary" style="display:none;">✅ Calibration Complete</button>
+        <button id="calibration-restart-btn" class="btn-danger" style="display:none;">🔄 Restart</button>
+      </div>
+
+      <!-- Status Info -->
+      <div class="calibration-status">
+        <p id="status-text">Status: Ready to calibrate</p>
+        <p id="quality-text"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

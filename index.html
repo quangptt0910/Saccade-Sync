@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SaccadeSync — Iris & Pupil Tracking with Full Face Landmarks</title>
+  <link rel="stylesheet" href="src/styles/styles.css" />
+</head>
+<body>
+<div class="app">
+  <!-- HEADER -->
+  <header>
+    <h1>🎯 SaccadeSync — Full Face Landmarks + Iris Tracking</h1>
+    <p class="muted">Uses MediaPipe Face Landmarker (Modern API). Shows 478 facial landmarks + iris + blend shapes.</p>
+  </header>
+
+  <main>
+    <!-- CONTROLS -->
+    <div class="controls">
+      <button id="startBtn" class="btn">🎥 Start Camera</button>
+      <button id="stopBtn" class="btn danger" disabled>⏹️ Stop</button>
+      <button id="exportBtn" class="btn" disabled>📥 Export CSV</button>
+      <label class="small">FPS: <span id="fps">0</span> | Frames: <span id="frames">0</span></label>
+    </div>
+
+    <!-- VIDEO & CANVAS -->
+    <div class="video-wrap">
+      <video id="input_video" playsinline style="display:none"></video>
+      <canvas id="output_canvas" width="1280" height="720"></canvas>
+    </div>
+
+    <!-- IRIS DATA PANEL -->
+    <section class="data-panel">
+      <h2>📊 Iris Tracking Data</h2>
+      <div class="grid">
+        <div>Left Iris X: <b id="leftX">-</b></div>
+        <div>Left Iris Y: <b id="leftY">-</b></div>
+        <div>Right Iris X: <b id="rightX">-</b></div>
+        <div>Right Iris Y: <b id="rightY">-</b></div>
+        <div>Left Pupil Radius: <b id="leftR">-</b></div>
+        <div>Right Pupil Radius: <b id="rightR">-</b></div>
+        <div>Frames: <b id="frames">0</b></div>
+      </div>
+    </section>
+
+    <!-- NEW: BLEND SHAPES DISPLAY -->
+    <!-- This shows facial expressions (smile, eyebrow raise, mouth open, etc.) -->
+    <section class="blend-shapes-panel">
+      <h2>😊 Facial Expressions (Blend Shapes)</h2>
+      <ul id="video-blend-shapes" class="blend-shapes-container">
+        <li class="blend-shapes-placeholder">Detecting...</li>
+      </ul>
+    </section>
+
+    <!-- NOTES -->
+    <section class="notes">
+      <p>✅ For best results:</p>
+      <ul>
+        <li>Allow camera access when prompted</li>
+        <li>Ensure good lighting</li>
+        <li>Face the camera directly</li>
+        <li>Keep your face fully visible in frame</li>
+      </ul>
+    </section>
+  </main>
+
+<!--  <footer>-->
+<!--    <small>LocalHost Demo — MediaPipe Face Landmarker (Modern API) v0.10.3</small>-->
+<!--  </footer>-->
+</div>
+
+-->
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
