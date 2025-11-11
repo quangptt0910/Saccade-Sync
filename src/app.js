@@ -79,7 +79,7 @@ async function initialize() {
       minFaceDetectionConfidence: 0.5,
       minFacePresenceConfidence: 0.5,
       minTrackingConfidence: 0.5,
-      outputFaceBlendshapes: true  //Enable blend shapes (facial expressions)
+      outputFaceBlendshapes: false  //Enable blend shapes (facial expressions)
     });
 
     //  Initialize DrawingUtils for rendering full landmarks
@@ -234,11 +234,11 @@ async function predictWebcam() {
       // Draw all face landmarks
       try {
         // Draw face tesselation (wireframe)
-        drawingUtils.drawConnectors(
-            landmarks,
-            FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-            {color: "#C0C0C070", lineWidth: 1}
-        );
+        // drawingUtils.drawConnectors(
+        //     landmarks,
+        //     FaceLandmarker.FACE_LANDMARKS_TESSELATION,
+        //     {color: "#C0C0C070", lineWidth: 1}
+        // );
 
         // Draw right eye
         drawingUtils.drawConnectors(
@@ -248,11 +248,11 @@ async function predictWebcam() {
         );
 
         // Draw right eyebrow
-        drawingUtils.drawConnectors(
-            landmarks,
-            FaceLandmarker.FACE_LANDMARKS_RIGHT_EYEBROW,
-            {color: "#FF3030", lineWidth: 2}
-        );
+        // drawingUtils.drawConnectors(
+        //     landmarks,
+        //     FaceLandmarker.FACE_LANDMARKS_RIGHT_EYEBROW,
+        //     {color: "#FF3030", lineWidth: 2}
+        // );
 
         // Draw left eye
         drawingUtils.drawConnectors(
@@ -262,25 +262,25 @@ async function predictWebcam() {
         );
 
         // Draw left eyebrow
-        drawingUtils.drawConnectors(
-            landmarks,
-            FaceLandmarker.FACE_LANDMARKS_LEFT_EYEBROW,
-            {color: "#30FF30", lineWidth: 2}
-        );
+        // drawingUtils.drawConnectors(
+        //     landmarks,
+        //     FaceLandmarker.FACE_LANDMARKS_LEFT_EYEBROW,
+        //     {color: "#30FF30", lineWidth: 2}
+        // );
 
         // Draw face oval (contour)
-        drawingUtils.drawConnectors(
-            landmarks,
-            FaceLandmarker.FACE_LANDMARKS_FACE_OVAL,
-            {color: "#E0E0E0", lineWidth: 2}
-        );
+        // drawingUtils.drawConnectors(
+        //     landmarks,
+        //     FaceLandmarker.FACE_LANDMARKS_FACE_OVAL,
+        //     {color: "#E0E0E0", lineWidth: 2}
+        // );
 
         // Draw lips
-        drawingUtils.drawConnectors(
-            landmarks,
-            FaceLandmarker.FACE_LANDMARKS_LIPS,
-            {color: "#E0E0E0", lineWidth: 2}
-        );
+        // drawingUtils.drawConnectors(
+        //     landmarks,
+        //     FaceLandmarker.FACE_LANDMARKS_LIPS,
+        //     {color: "#E0E0E0", lineWidth: 2}
+        // );
 
         // Draw iris (left in green, right in red)
         drawingUtils.drawConnectors(
