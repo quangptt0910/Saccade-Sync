@@ -1,0 +1,188 @@
+/* ============================================================================
+   LIGHT THEME TOP NAVIGATION BAR - PRETTIER VERSION
+   ============================================================================ */
+
+.topbar {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 0 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    height: 70px;
+    border-bottom: 1px solid rgba(76, 175, 80, 0.1);
+}
+
+.topbar-logo a {
+    color: #2c3e50;
+    font-size: 26px;
+    font-weight: 700;
+    text-decoration: none;
+    position: relative;
+    padding-bottom: 5px;
+    transition: color 0.3s ease;
+}
+
+.topbar-logo a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.topbar-logo a:hover {
+    color: #4CAF50;
+}
+
+.topbar-logo a:hover::after {
+    transform: scaleX(1);
+}
+
+.topbar-nav {
+    display: flex;
+    list-style: none;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+}
+
+.topbar-nav li a {
+    display: block;
+    padding: 12px 24px;
+    color: #555;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 15px;
+    position: relative;
+}
+
+.topbar-nav li a::before {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: #4CAF50;
+    transition: width 0.3s ease;
+}
+
+.topbar-nav li a:hover {
+    background: rgba(76, 175, 80, 0.08);
+    color: #4CAF50;
+    transform: translateY(-2px);
+}
+
+.topbar-nav li a:hover::before {
+    width: 70%;
+}
+
+.topbar-nav li a.active {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.topbar-nav li a.active::before {
+    display: none;
+}
+
+.topbar-toggle {
+    display: none;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+    transition: all 0.3s ease;
+}
+
+.topbar-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.topbar-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .topbar {
+        padding: 0 20px;
+        height: 60px;
+    }
+
+    .topbar-nav {
+        position: absolute;
+        top: 60px;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        padding: 15px 0;
+        gap: 5px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, box-shadow 0.4s ease;
+        box-shadow: none;
+    }
+
+    .topbar-nav.active {
+        max-height: 500px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .topbar-nav li a {
+        padding: 15px 25px;
+        border-radius: 0;
+        margin: 0 10px;
+    }
+
+    .topbar-nav li a:hover {
+        transform: translateY(0);
+    }
+
+    .topbar-toggle {
+        display: block;
+    }
+
+    .topbar-logo a {
+        font-size: 22px;
+    }
+}
+
+/* Smooth scrolling for the whole page */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Optional: Add subtle animation to topbar on page load */
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.topbar {
+    animation: slideDown 0.5s ease-out;
+}
