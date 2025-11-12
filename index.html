@@ -15,6 +15,10 @@
   </header>
 
   <main>
+    <div class="controls">
+      <a href="src/screens/calibration/calibration.html" class="btn">Start Calibration</a>
+    </div>
+
     <!-- CONTROLS -->
     <div class="controls">
       <button id="startBtn" class="btn">🎥 Start Camera</button>
@@ -42,18 +46,11 @@
       </div>
     </section>
 
-    <!-- This shows facial expressions (smile, eyebrow raise, mouth open, etc.) -->
-<!--    <section class="blend-shapes-panel">-->
-<!--      <h2>😊 Facial Expressions (Blend Shapes)</h2>-->
-<!--      <ul id="video-blend-shapes" class="blend-shapes-container">-->
-<!--        <li class="blend-shapes-placeholder">Detecting...</li>-->
-<!--      </ul>-->
-<!--    </section>-->
-
     <!-- NOTES -->
     <section class="notes">
       <p>✅ For best results:</p>
       <ul>
+        <li>Run calibration before starting</li>
         <li>Allow camera access when prompted</li>
         <li>Ensure good lighting</li>
         <li>Face the camera directly</li>
@@ -61,13 +58,7 @@
       </ul>
     </section>
   </main>
-
-<!--  <footer>-->
-<!--    <small>LocalHost Demo — MediaPipe Face Landmarker (Modern API) v0.10.3</small>-->
-<!--  </footer>-->
 </div>
-
--->
 
 <script type="module" src="src/app.js"></script>
 </body>

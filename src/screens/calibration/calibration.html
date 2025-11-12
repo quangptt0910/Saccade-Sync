@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calibration</title>
+    <link rel="stylesheet" href="../../styles/styles.css">
+    <style>
+        .calibration-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        #distance-status {
+            font-size: 1.3em;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        #distance-status.good {
+            color: #2ecc71;
+        }
+        #distance-status.close {
+            color: #e67e22;
+        }
+        #distance-status.far {
+            color: #e74c3c;
+        }
+
+        #calibration-video {
+            display: none;
+        }
+
+        #calibration-canvas {
+            width: 100%;
+            max-width: 640px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+<section id="calibration-screen" class="screen">
+    <div class="calibration-container">
+        <h2>Distance Calibration</h2>
+        <p>Please sit about <strong>1 meter (≈3 feet)</strong> from your screen.</p>
+
+        <video id="calibration-video" autoplay playsinline></video>
+        <canvas id="calibration-canvas" width="640" height="480"></canvas>
+
+        <p id="distance-status">Initializing camera...</p>
+
+        <div class="control-buttons">
+            <button id="start-calibration-btn" class="btn">Start Calibration</button>
+            <button id="stop-calibration-btn" class="btn danger" disabled>Stop</button>
+        </div>
+    </div>
+</section>
+
+<script type="module" src="calibration.js"></script>
+</body>
+</html>
