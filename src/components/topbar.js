@@ -17,12 +17,12 @@ class TopBar {
                 
                 <ul class="topbar-nav">
                     <li><a href="index.html" class="${this.currentPage === 'home' ? 'active' : ''}">Home</a></li>
-                    <li><a href="survey.html" class="${this.currentPage === 'survey' ? 'active' : ''}">Survey</a></li>
-                    <li><a href="calibration.html" class="${this.currentPage === 'calibration' ? 'active' : ''}">Calibration</a></li>
-                    <li><a href="game.html" class="${this.currentPage === 'game' ? 'active' : ''}">Game</a></li>
+                    <li><a href="screens/survey/survey.html" class="${this.currentPage === 'survey' ? 'active' : ''}">Survey</a></li>
+                    <li><a href="screens/calibration/calibration.html" class="${this.currentPage === 'calibration' ? 'active' : ''}">Calibration</a></li>
+                    <li><a href="screens/game/game.html" class="${this.currentPage === 'game' ? 'active' : ''}">Game</a></li>
                     <li><a href="results.html" class="${this.currentPage === 'results' ? 'active' : ''}">Results</a></li>
                     <li><a href="settings.html" class="${this.currentPage === 'settings' ? 'active' : ''}">Settings</a></li>
-                    <li><a href="login.html" class="${this.currentPage === 'login' ? 'active' : ''}">Login</a></li>
+                    <li><a href="screens/login/login.html" class="${this.currentPage === 'login' ? 'active' : ''}">Login</a></li>
                 </ul>
                 
                 <button class="topbar-toggle" id="topbarToggle">☰</button>
