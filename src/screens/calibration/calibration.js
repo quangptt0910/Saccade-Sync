@@ -16,6 +16,7 @@ const closeOverlayBtn = document.getElementById("close-overlay-btn");
 
 const parameterDisplay = document.createElement("div");
 parameterDisplay.id = "calibration-parameters";
+parameterDisplay.style.marginTop = "20px";
 statusEl.parentNode.insertBefore(parameterDisplay, statusEl.nextSibling);
 
 let faceLandmarker = null;
@@ -23,7 +24,6 @@ let running = false;
 let lastTime = -1;
 let isPreChecking = false;
 
-// normalized coordinates (0.1 = 10% from the edge)
 const CALIBRATION_POINTS = [
     { x: 0.1, y: 0.1, label: "Top-Left" },
     { x: 0.5, y: 0.1, label: "Top-Center" },
@@ -36,23 +36,17 @@ const CALIBRATION_POINTS = [
     { x: 0.9, y: 0.9, label: "Bottom-Right" }
 ];
 const SAMPLES_PER_POINT = 15;
-const SAMPLE_DURATION_MS = 250;
+const SAMPLE_INTERVAL_MS = 200; // about 3 sec per point total
 
-// target range: [0.91m, 1.0m] (based on normalized inter-eye distance)
-const DISTANCE_FAR_THRESHOLD = 0.12;  // Too Far (< 0.91m / 3ft)
-const DISTANCE_CLOSE_THRESHOLD = 0.20; // Too Close (> 1m)
+const DISTANCE_FAR_THRESHOLD = 0.12;  // too far (normalized eye dist)
+const DISTANCE_CLOSE_THRESHOLD = 0.20; // too close
 
 let currentPointIndex = 0;
 let isRecording = false;
 let gazeData = [];
 
-
-/**
- * initialization the FaceLandmarker model
- */
 async function initFaceLandmarker() {
     statusEl.textContent = "Loading AI model...";
-
     const resolver = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
     );
@@ -65,131 +59,163 @@ async function initFaceLandmarker() {
         runningMode: "VIDEO",
         numFaces: 1
     });
-
     statusEl.textContent = "Model ready. Click 'Start Check'.";
     statusEl.className = "";
 }
 
-/**
- * logic to display parameters (remains the same)
- */
+
 function displayCalibrationParameters() {
-    const parameterSummary = CALIBRATION_POINTS.map((point, index) => {
-        const pointData = gazeData.filter(d => d.point_index === index);
-
-        if (pointData.length === 0) {
-            return { label: point.label, count: 0, avg_iris: { x: 'N/A', y: 'N/A', z: 'N/A' } };
+    const paramSummary = CALIBRATION_POINTS.map((point, idx) => {
+        const samples = gazeData.filter(d => d.point_index === idx);
+        if (samples.length === 0) {
+            return {
+                label: point.label,
+                count: 0,
+                avg_iris: { x: "N/A", y: "N/A", radius: "N/A" },
+            };
         }
-
-        const avg_iris = pointData.reduce((acc, curr) => ({
-            x: acc.x + curr.iris_3d.x, y: acc.y + curr.iris_3d.y, z: acc.z + curr.iris_3d.z
-        }), { x: 0, y: 0, z: 0 });
-
+        // Average iris center and radius
+        const avg = samples.reduce(
+            (acc, cur) => {
+                acc.x += cur.iris_center.x;
+                acc.y += cur.iris_center.y;
+                acc.radius += cur.iris_radius;
+                return acc;
+            },
+            { x: 0, y: 0, radius: 0 }
+        );
         return {
             label: point.label,
-            count: pointData.length,
+            count: samples.length,
             avg_iris: {
-                x: (avg_iris.x / pointData.length).toFixed(4),
-                y: (avg_iris.y / pointData.length).toFixed(4),
-                z: (avg_iris.z / pointData.length).toFixed(4)
-            }
+                x: (avg.x / samples.length).toFixed(4),
+                y: (avg.y / samples.length).toFixed(4),
+                radius: (avg.radius / samples.length).toFixed(4),
+            },
         };
     });
 
-    let html = `
+    parameterDisplay.innerHTML = `
         <style>
-            .param-table {
-                width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; text-align: left;
-                background: #fcfcfc; border-radius: 8px; overflow: hidden;
+            #calibration-parameters {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+                    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+                color: #374151;
+                max-width: 450px;
+                margin-top: 20px;
             }
-            .param-table th, .param-table td { padding: 10px 15px; border-bottom: 1px solid #eee; }
-            .param-table th { background-color: #e5e7eb; font-weight: 600; color: #4b5563; }
-            .param-table tr:last-child td { border-bottom: none; }
-            .param-table tr:hover { background-color: #f7f7f7; }
+            #calibration-parameters h3 {
+                font-weight: 600;
+                margin-bottom: 8px;
+                font-size: 1.2em;
+            }
+            #calibration-parameters table {
+                width: 100%;
+                border-collapse: collapse;
+                box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+                border-radius: 6px;
+                overflow: hidden;
+                background: #fff;
+            }
+            #calibration-parameters th,
+            #calibration-parameters td {
+                padding: 12px 15px;
+                text-align: left;
+                font-size: 0.9em;
+            }
+            #calibration-parameters th {
+                background: #f3f4f6;
+                font-weight: 600;
+                border-bottom: 1px solid #e5e7eb;
+                color: #4b5563;
+            }
+            #calibration-parameters tbody tr:hover {
+                background: #f9fafb;
+            }
+            #calibration-parameters tbody tr:last-child td {
+                border-bottom: none;
+            }
+            #calibration-parameters p {
+                margin-top: 12px;
+                font-size: 0.85em;
+                color: #6b7280;
+            }
         </style>
-        
-        <h3>Calibration Parameters (Averages)</h3>
-        <table class="param-table">
+        <h3>Calibration Results (Iris Center & Radius averages)</h3>
+        <table>
             <thead>
                 <tr>
-                    <th>Target Point</th><th>Samples</th><th>Avg. Iris X</th><th>Avg. Iris Y</th><th>Avg. Iris Z</th>
+                    <th>Target Point</th>
+                    <th>Samples</th>
+                    <th>Avg Iris X</th>
+                    <th>Avg Iris Y</th>
+                    <th>Avg Radius</th>
                 </tr>
             </thead>
             <tbody>
-    `;
-
-    parameterSummary.forEach(p => {
-        html += `
-            <tr>
-                <td>${p.label}</td><td>${p.count}</td><td>${p.avg_iris.x}</td><td>${p.avg_iris.y}</td><td>${p.avg_iris.z}</td>
-            </tr>
-        `;
-    });
-
-    html += `
+                ${paramSummary
+        .map(
+            (p) => `
+                <tr>
+                    <td>${p.label}</td>
+                    <td>${p.count}</td>
+                    <td>${p.avg_iris.x}</td>
+                    <td>${p.avg_iris.y}</td>
+                    <td>${p.avg_iris.radius}</td>
+                </tr>
+            `
+        )
+        .join("")}
             </tbody>
         </table>
-        <p style="margin-top: 15px; font-size: 0.9em; color: #6b7280;">
-            *Those values will be used in the test to ensure personalisation :))
-        </p>
+        <p>*These values are used for personalized gaze detection calibration.</p>
     `;
-
-    parameterDisplay.innerHTML = html;
 }
 
-/**
- * updates the UI for the next calibration point or ends the routine
- */
 function nextCalibrationPoint() {
     if (currentPointIndex < CALIBRATION_POINTS.length) {
-
         recordBtn.textContent = `✓ Record (0/${SAMPLES_PER_POINT})`;
         recordBtn.disabled = false;
-        recordBtn.style.display = 'inline-block';
+        recordBtn.style.display = "inline-block";
 
-        statusEl.textContent = `Look at the dot. Click 'Record'. Point ${currentPointIndex + 1}/${CALIBRATION_POINTS.length}`;
-        statusEl.className = "close";
-        parameterDisplay.innerHTML = '';
-
+        statusEl.textContent = `Look at the dot and click 'Record'. Point ${currentPointIndex + 1} of ${CALIBRATION_POINTS.length}`;
+        statusEl.className = "";
+        parameterDisplay.innerHTML = "";
     } else {
         stopCalibration(false);
-
-        statusEl.textContent = "Calibration completed!!";
+        statusEl.textContent = "Calibration complete! 🎉";
         statusEl.className = "good";
 
-        stopBtn.style.display = 'none';
-        recordBtn.style.display = 'none';
-        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = "none";
+        recordBtn.style.display = "none";
+        startBtn.style.display = "inline-block";
 
         displayCalibrationParameters();
     }
 }
 
-/**
- * starts the camera and initiates the distance pre-check flow
- */
 async function startCalibration() {
     if (running) return;
 
     running = true;
     isPreChecking = true;
-    startBtn.style.display = 'none';
+    startBtn.style.display = "none";
     stopBtn.disabled = false;
-    stopBtn.style.display = 'inline-block';
-    recordBtn.style.display = 'none';
+    stopBtn.style.display = "inline-block";
+    recordBtn.style.display = "none";
 
-    distanceOverlay.classList.remove('hide');
+    distanceOverlay.classList.remove("hide");
     overlayStatusText.textContent = "Starting camera...";
     overlayInstructions.textContent = "Waiting for video stream...";
-    closeOverlayBtn.style.display = 'none';
+    closeOverlayBtn.style.display = "none";
 
     statusEl.textContent = "Performing Distance Check...";
     statusEl.className = "";
-    parameterDisplay.innerHTML = '';
+    parameterDisplay.innerHTML = "";
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480, facingMode: "user" }
+            video: { width: 640, height: 480, facingMode: "user" },
         });
         video.srcObject = stream;
 
@@ -199,7 +225,7 @@ async function startCalibration() {
     } catch (e) {
         statusEl.textContent = "Error: Camera access denied or unavailable.";
         statusEl.className = "far";
-        distanceOverlay.classList.remove('hide');
+        distanceOverlay.classList.remove("hide");
         overlayStatusText.textContent = "Camera Error!";
         overlayInstructions.textContent = "Access denied or unavailable. Please check permissions.";
         stopCalibration(true);
@@ -207,12 +233,9 @@ async function startCalibration() {
     }
 }
 
-/**
- * transitions from distance check (overlay closed) to gaze calibration
- */
 function continueGazeCalibration() {
     if (!running) return;
-    distanceOverlay.classList.add('hide');
+    distanceOverlay.classList.add("hide");
 
     isPreChecking = false;
     currentPointIndex = 0;
@@ -220,24 +243,20 @@ function continueGazeCalibration() {
     nextCalibrationPoint();
 }
 
-
-/**
- * stops the camera and the process
- */
 function stopCalibration(resetButtons = true) {
     running = false;
     isPreChecking = false;
     isRecording = false;
 
     if (resetButtons) {
-        startBtn.style.display = 'inline-block';
-        stopBtn.style.display = 'none';
-        recordBtn.style.display = 'none';
+        startBtn.style.display = "inline-block";
+        stopBtn.style.display = "none";
+        recordBtn.style.display = "none";
     }
-    distanceOverlay.classList.add('hide');
+    distanceOverlay.classList.add("hide");
 
     if (video.srcObject) {
-        video.srcObject.getTracks().forEach(t => t.stop());
+        video.srcObject.getTracks().forEach((t) => t.stop());
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -245,35 +264,32 @@ function stopCalibration(resetButtons = true) {
     if (currentPointIndex < CALIBRATION_POINTS.length && running) {
         statusEl.textContent = "Calibration stopped.";
         statusEl.className = "";
-        parameterDisplay.innerHTML = '';
+        parameterDisplay.innerHTML = "";
     }
 }
-/**
- * starts the automatic data collection for the current point over a set duration
- */
+
+
 function startRecording() {
     if (isRecording || !running || currentPointIndex >= CALIBRATION_POINTS.length) return;
 
     isRecording = true;
     recordBtn.disabled = true;
 
-    let samplesCollectedInStep = 0;
+    let samplesCollected = 0;
 
-    const interval = setInterval(() => {
-        samplesCollectedInStep++;
+    const sampleTimer = setInterval(() => {
+        samplesCollected++;
+        recordBtn.textContent = `✓ Record (${samplesCollected}/${SAMPLES_PER_POINT})`;
 
-        if (samplesCollectedInStep >= SAMPLES_PER_POINT) {
-            clearInterval(interval);
+        if (samplesCollected >= SAMPLES_PER_POINT) {
+            clearInterval(sampleTimer);
             isRecording = false;
             currentPointIndex++;
             nextCalibrationPoint();
         }
-    }, SAMPLE_DURATION_MS / SAMPLES_PER_POINT);
+    }, SAMPLE_INTERVAL_MS);
 }
 
-/**
- * the main loop for video processing, drawing, and data collection
- */
 function loop() {
     if (!running) return;
     requestAnimationFrame(loop);
@@ -282,6 +298,7 @@ function loop() {
     if (lastTime === video.currentTime) return;
     lastTime = video.currentTime;
 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const results = faceLandmarker.detectForVideo(video, performance.now());
@@ -290,7 +307,7 @@ function loop() {
         if (isPreChecking) {
             overlayStatusText.textContent = "No face detected!";
             overlayInstructions.textContent = "Please ensure your entire face is visible and centered.";
-            closeOverlayBtn.style.display = 'none';
+            closeOverlayBtn.style.display = "none";
         } else {
             statusEl.textContent = "No face detected. Please center your face.";
             statusEl.className = "";
@@ -299,28 +316,31 @@ function loop() {
     }
 
     const landmarks = results.faceLandmarks[0];
+
     const leftEyeOuter = landmarks[33];
     const rightEyeOuter = landmarks[263];
 
     if (isPreChecking) {
         const eyeDistance = Math.sqrt(
-            Math.pow(leftEyeOuter.x - rightEyeOuter.x, 2) +
-            Math.pow(leftEyeOuter.y - rightEyeOuter.y, 2)
+            (leftEyeOuter.x - rightEyeOuter.x) ** 2 + (leftEyeOuter.y - rightEyeOuter.y) ** 2
         );
+
         let distanceCheckPassed = false;
 
         if (eyeDistance < DISTANCE_FAR_THRESHOLD) {
             overlayStatusText.textContent = "TOO FAR! ⬅️";
-            overlayInstructions.textContent = "Please move closer. You must be between 3 feet and 1 meter (≈0.91m - 1.0m).";
-            closeOverlayBtn.style.display = 'none';
+            overlayInstructions.textContent =
+                "Please move closer. You must be between 3 feet and 1 meter (≈0.91m - 1.0m).";
+            closeOverlayBtn.style.display = "none";
         } else if (eyeDistance > DISTANCE_CLOSE_THRESHOLD) {
             overlayStatusText.textContent = "TOO CLOSE! ➡️";
-            overlayInstructions.textContent = "Please move back. You must be between 3 feet and 1 meter (≈0.91m - 1.0m).";
-            closeOverlayBtn.style.display = 'none';
+            overlayInstructions.textContent =
+                "Please move back. You must be between 3 feet and 1 meter (≈0.91m - 1.0m).";
+            closeOverlayBtn.style.display = "none";
         } else {
             overlayStatusText.textContent = "DISTANCE CORRECT! ✅";
-            overlayInstructions.textContent = "Now, keep your head still and click 'Close Window' to proceed to calibration.";
-            closeOverlayBtn.style.display = 'inline-block';
+            overlayInstructions.textContent = "Keep your head still and click 'Close Window' to start calibration.";
+            closeOverlayBtn.style.display = "inline-block";
             distanceCheckPassed = true;
         }
 
@@ -329,64 +349,106 @@ function loop() {
         const markerY = forehead.y * canvas.height;
         ctx.beginPath();
         ctx.arc(markerX, markerY, 8, 0, 2 * Math.PI);
-        ctx.fillStyle = distanceCheckPassed ? '#10b981' : '#ef4444';
+        ctx.fillStyle = distanceCheckPassed ? "#10b981" : "#ef4444";
         ctx.fill();
 
         return;
     }
 
-    const currentSamplesCount = gazeData.filter(d => d.point_index === currentPointIndex).length;
 
-    if (running && currentPointIndex < CALIBRATION_POINTS.length) {
+    const currentSamplesCount = gazeData.filter((d) => d.point_index === currentPointIndex).length;
+
+    if (currentPointIndex < CALIBRATION_POINTS.length) {
         const target = CALIBRATION_POINTS[currentPointIndex];
         const targetX = target.x * canvas.width;
         const targetY = target.y * canvas.height;
 
         ctx.beginPath();
         ctx.arc(targetX, targetY, 15, 0, 2 * Math.PI);
-        ctx.fillStyle = isRecording ? '#10b981' : '#ef4444';
-        ctx.shadowColor = isRecording ? '#10b981' : '#ef4444';
-        ctx.shadowBlur = 10;
+        ctx.fillStyle = isRecording ? "#10b981" : "#ef4444";
+        ctx.shadowColor = isRecording ? "#10b981" : "#ef4444";
+        ctx.shadowBlur = 15;
         ctx.fill();
         ctx.shadowBlur = 0;
     }
 
-    if (isRecording) {
-        statusEl.textContent = `Collecting samples: ${currentSamplesCount + 1} of ${SAMPLES_PER_POINT}`;
-        statusEl.className = "good";
-
-        const eyeMarkerX = leftEyeOuter.x * canvas.width;
-        const eyeMarkerY = leftEyeOuter.y * canvas.height;
-
-        ctx.beginPath();
-        ctx.arc(eyeMarkerX, eyeMarkerY, 8, 0, 2 * Math.PI);
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-    }
-
     if (isRecording && currentSamplesCount < SAMPLES_PER_POINT) {
+        const irisIndices = [468, 469, 470, 471, 472, 473];
+        const irisPoints = irisIndices.map(i => landmarks[i]);
 
-        const irisData = {
-            x: leftEyeOuter.x,
-            y: leftEyeOuter.y,
-            z: leftEyeOuter.z || 0,
-        };
+        const irisCenter = irisPoints.reduce(
+            (acc, p) => {
+                acc.x += p.x;
+                acc.y += p.y;
+                return acc;
+            },
+            { x: 0, y: 0 }
+        );
+        irisCenter.x /= irisPoints.length;
+        irisCenter.y /= irisPoints.length;
 
-        const currentTarget = CALIBRATION_POINTS[currentPointIndex];
+        const irisRadius = irisPoints.reduce((acc, p) => {
+            const dx = p.x - irisCenter.x;
+            const dy = p.y - irisCenter.y;
+            return acc + Math.sqrt(dx * dx + dy * dy);
+        }, 0) / irisPoints.length;
 
         gazeData.push({
             point_index: currentPointIndex,
-            target_x_norm: currentTarget.x,
-            target_y_norm: currentTarget.y,
-            iris_3d: irisData,
+            target_x_norm: CALIBRATION_POINTS[currentPointIndex].x,
+            target_y_norm: CALIBRATION_POINTS[currentPointIndex].y,
+            iris_center: { x: irisCenter.x, y: irisCenter.y },
+            iris_radius: irisRadius,
         });
+
+        ctx.beginPath();
+        ctx.arc(
+            irisCenter.x * canvas.width,
+            irisCenter.y * canvas.height,
+            irisRadius * canvas.width * 2,
+            0,
+            2 * Math.PI
+        );
+        ctx.fillStyle = "rgba(59, 130, 246, 0.35)";
+        ctx.fill();
+
+        // Draw iris outline
+        ctx.beginPath();
+        ctx.arc(
+            irisCenter.x * canvas.width,
+            irisCenter.y * canvas.height,
+            irisRadius * canvas.width * 2,
+            0,
+            2 * Math.PI
+        );
+        ctx.strokeStyle = "#3b82f6";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        irisPoints.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x * canvas.width, p.y * canvas.height, 3, 0, 2 * Math.PI);
+            ctx.fillStyle = "#3b82f6";
+            ctx.fill();
+        });
+
+        ctx.beginPath();
+        ctx.arc(landmarks[33].x * canvas.width, landmarks[33].y * canvas.height, 6, 0, 2 * Math.PI);
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        statusEl.textContent = `Collecting samples: ${currentSamplesCount + 1} / ${SAMPLES_PER_POINT}`;
+        statusEl.className = "good";
+    } else if (isRecording) {
+        statusEl.textContent = `Processing...`;
+        statusEl.className = "good";
     }
 }
 
 startBtn.addEventListener("click", startCalibration);
 stopBtn.addEventListener("click", () => stopCalibration(true));
-closeOverlayBtn.addEventListener("click", continueGazeCalibration); // New button event
+closeOverlayBtn.addEventListener("click", continueGazeCalibration);
 recordBtn.addEventListener("click", startRecording);
 
 initFaceLandmarker();
