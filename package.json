@@ -9,6 +9,7 @@
   },
   "private": true,
   "dependencies": {
+    "firebase": "^12.5.0",
     "serve": "^14.0.1"
   }
 }
