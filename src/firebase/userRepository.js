@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "./config";
 
 // Create or update a user profile in Firestore
@@ -11,7 +11,7 @@ export const createUserProfile = async (user, additionalData = {}) => {
     const userData = {
         email: user.email,
         displayName: user.displayName || "",
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
         ...additionalData
     };
 
@@ -43,11 +43,15 @@ export const getUserProfile = async (userId) => {
 
 // Update user score (example for game data)
 export const updateUserScore = async (userId, newScore) => {
+    if (!Number.isFinite(newScore)) {
+        throw new Error("Invalid score: must be a finite number");
+    }
+
     const userRef = doc(db, "users", userId);
     try {
         await updateDoc(userRef, {
             score: newScore,
-            lastPlayed: new Date()
+            lastPlayed: serverTimestamp()
         });
     } catch (error) {
         console.error("Error updating score:", error);
