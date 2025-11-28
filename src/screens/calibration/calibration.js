@@ -22,6 +22,7 @@ const dotStage = document.getElementById("dot-stage");
 const calDot = document.getElementById("cal-dot");
 const fsWarning = document.getElementById("fs-warning");
 const fsWarningPanel = fsWarning.querySelector(".panel");
+const redoTestBtn = document.getElementById("redo-test-btn");
 
 let faceLandmarker = null;
 let runningCamera = false;
@@ -29,6 +30,7 @@ let lastVideoTime = -1;
 let isPreChecking = false;
 let distanceOK = false;
 let distanceCheckFailed = false;
+let canOfferRedo = false;
 
 const DISTANCE_FAR_THRESHOLD = 0.12;
 const DISTANCE_CLOSE_THRESHOLD = 0.20;
@@ -90,6 +92,7 @@ function handleDistanceState(landmarks) {
     if (!landmarks) {
         distanceOK = false;
         closeOverlayBtn.style.display = "none";
+        if (redoTestBtn) redoTestBtn.style.display = "none";
         return false;
     }
 
@@ -98,7 +101,8 @@ function handleDistanceState(landmarks) {
     if (d < DISTANCE_FAR_THRESHOLD) {
         distanceOK = false;
         closeOverlayBtn.style.display = "none";
-        overlayStatusText.textContent = "TOO FAR! ⬅️";
+        if (redoTestBtn) redoTestBtn.style.display = "none";
+        overlayStatusText.textContent = "TOO FAR";
         overlayInstructions.textContent = "Please move closer (≈ 40–100 cm).";
         statusEl.textContent = "Distance Alert: TOO FAR! Move closer.";
         statusEl.className = "far";
@@ -108,7 +112,8 @@ function handleDistanceState(landmarks) {
     if (d > DISTANCE_CLOSE_THRESHOLD) {
         distanceOK = false;
         closeOverlayBtn.style.display = "none";
-        overlayStatusText.textContent = "TOO CLOSE! ➡️";
+        if (redoTestBtn) redoTestBtn.style.display = "none";
+        overlayStatusText.textContent = "TOO CLOSE";
         overlayInstructions.textContent = "Please move back (≈ 40–100 cm).";
         statusEl.textContent = "Distance Alert: TOO CLOSE! Move back.";
         statusEl.className = "close";
@@ -118,15 +123,24 @@ function handleDistanceState(landmarks) {
     distanceOK = true;
 
     if (isPreChecking) {
-        overlayStatusText.textContent = "DISTANCE CORRECT! ✅";
+        overlayStatusText.textContent = "DISTANCE CORRECT";
         overlayInstructions.textContent =
             "Keep your head still and click 'Close Window & Start Calibration'.";
         closeOverlayBtn.style.display = "inline-block";
-        statusEl.textContent = "DISTANCE CORRECT! ✅";
+        statusEl.textContent = "DISTANCE CORRECT";
         statusEl.className = "good";
     } else {
         statusEl.textContent = "Distance OK";
         statusEl.className = "good";
+        hideFsWarning(); // hide incorrect-distance overlay when back in range
+    }
+
+    if (redoTestBtn) {
+        if (canOfferRedo && !isPreChecking) {
+            redoTestBtn.style.display = "inline-block";
+        } else {
+            redoTestBtn.style.display = "none";
+        }
     }
 
     return true;
@@ -164,25 +178,6 @@ function cameraLoop() {
         abortDot = true;
         showFsWarning();
     }
-
-    if (!isPreChecking && !runningDot && abortDot && ok) {
-        hideFsWarning();
-        awaitRestartDotCalibration();
-    }
-}
-
-let restartTimeout = null;
-
-function awaitRestartDotCalibration() {
-    if (restartTimeout) clearTimeout(restartTimeout);
-
-    restartTimeout = setTimeout(async () => {
-        abortDot = false;
-        statusEl.textContent = "Distance OK — restarting calibration...";
-        statusEl.className = "good";
-        await sleep(600);
-        if (!runningDot) runDotCalibration();
-    }, 700);
 }
 
 function showFsWarning() {
@@ -194,6 +189,7 @@ function showFsWarning() {
 
 function hideFsWarning() {
     fsWarning.style.display = "none";
+    if (redoTestBtn) redoTestBtn.style.display = "none";
 }
 
 async function startDistanceCheck() {
@@ -203,10 +199,12 @@ async function startDistanceCheck() {
     isPreChecking = true;
     distanceOK = false;
     distanceCheckFailed = false;
+    canOfferRedo = false;
 
     startBtn.style.display = "none";
     stopBtn.style.display = "inline-block";
     closeOverlayBtn.style.display = "none";
+    if (redoTestBtn) redoTestBtn.style.display = "none";
     distanceOverlay.classList.remove("hide");
 
     overlayStatusText.textContent = "Starting camera...";
@@ -234,6 +232,7 @@ async function startDistanceCheck() {
 
         distanceOverlay.classList.remove("hide");
         closeOverlayBtn.style.display = "none";
+        if (redoTestBtn) redoTestBtn.style.display = "none";
         overlayStatusText.textContent = "Camera Error!";
         overlayInstructions.textContent =
             "Unable to access camera. Please check permissions.";
@@ -255,8 +254,10 @@ function stopDistanceCheck(resetUI = true) {
     runningCamera = false;
     isPreChecking = false;
     distanceOK = false;
+    canOfferRedo = false;
 
     closeOverlayBtn.style.display = "none";
+    if (redoTestBtn) redoTestBtn.style.display = "none";
 
     if (resetUI) {
         startBtn.style.display = "inline-block";
@@ -356,6 +357,8 @@ async function runDotCalibration() {
 
     abortDot = false;
     runningDot = true;
+    canOfferRedo = false;
+    if (redoTestBtn) redoTestBtn.style.display = "none";
 
     placeDot(window.innerWidth / 2, window.innerHeight / 2, false);
     await sleep(120);
@@ -400,6 +403,7 @@ async function runDotCalibration() {
         runningDot = false;
         calDot.style.opacity = "0";
         calDot.classList.remove("pulse");
+        canOfferRedo = true;
         showFsWarning();
         return;
     }
@@ -435,6 +439,16 @@ closeOverlayBtn.addEventListener("click", async () => {
     await runDotCalibration();
 });
 
+if (redoTestBtn) {
+    redoTestBtn.addEventListener("click", async () => {
+        if (!distanceOK || runningDot || !runningCamera) return;
+        canOfferRedo = false;
+        redoTestBtn.style.display = "none";
+        hideFsWarning();
+        await runDotCalibration();
+    });
+}
+
 startBtn.addEventListener("click", startDistanceCheck);
 
 stopBtn.addEventListener("click", () => {
@@ -446,9 +460,11 @@ stopBtn.addEventListener("click", () => {
     runningCamera = false;
     isPreChecking = false;
     distanceOK = false;
+    canOfferRedo = false;
 
     distanceOverlay.classList.remove("hide");
     closeOverlayBtn.style.display = "none";
+    if (redoTestBtn) redoTestBtn.style.display = "none";
     startBtn.style.display = "inline-block";
     stopBtn.style.display = "none";
 

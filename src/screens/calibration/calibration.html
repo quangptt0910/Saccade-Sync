@@ -3,44 +3,69 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gaze Calibration with Distance Check</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Gaze Calibration Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --color-primary-dark: #1f2937;
+            --color-primary-accent: #059669;
+            --color-secondary-accent: #dc2626;
+            --color-background-light: #f9fafb;
+            --color-text-main: #111827;
+            --color-text-muted: #6b7280;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
+            background-color: var(--color-background-light);
+            color: var(--color-text-main);
             margin: 0;
             padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            line-height: 1.5;
         }
 
         .calibration-card {
             background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05);
+            border-top: 4px solid var(--color-primary-accent);
             padding: 40px;
-            max-width: 750px;
+            max-width: 800px;
             width: 90%;
             text-align: center;
         }
 
-        h2 { color: #1f2937; font-weight: 700; font-size: 2em; margin-bottom: 8px; }
-        .instruction-text { color: #6b7280; margin-bottom: 30px; font-size: 1.05em; line-height: 1.5; }
+        h2 {
+            color: var(--color-primary-dark);
+            font-weight: 800;
+            font-size: 2.2em;
+            margin-bottom: 5px;
+            letter-spacing: -0.5px;
+        }
+        .instruction-text {
+            color: var(--color-text-muted);
+            margin-bottom: 30px;
+            font-size: 1em;
+            font-weight: 400;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
 
         .video-container {
             position: relative;
             width: 100%;
-            max-width: 640px;
-            margin: 0 auto 20px auto;
-            border-radius: 12px;
+            max-width: 700px;
+            margin: 0 auto 30px auto;
+            border-radius: 6px;
             overflow: hidden;
-            box-shadow: 0 0 0 4px #e5e7eb, 0 8px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid #e5e7eb;
             background-color: #000;
-            height: 360px;
+            height: 393.75px;
         }
 
         #calibration-video, #calibration-canvas {
@@ -50,47 +75,96 @@
             object-fit: cover;
         }
 
-        #calibration-video.hidden { display: none; visibility: hidden; }
-
         #distance-overlay {
+            background-color: rgba(17, 24, 39, 0.9);
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.85);
             color: white;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 30px;
             box-sizing: border-box;
             z-index: 10;
-            transition: opacity 0.25s ease;
         }
-        #distance-overlay.hide { opacity: 0; pointer-events: none; }
 
-        #overlay-status-text { font-size: 1.5em; font-weight: 600; margin-bottom: 20px; }
-        #overlay-instructions { font-size: 1.05em; margin-bottom: 20px; text-align:center; max-width: 420px; }
+        #overlay-status-text {
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--color-primary-accent);
+        }
+        #overlay-instructions {
+            font-size: 1em;
+            margin-bottom: 30px;
+            text-align:center;
+            max-width: 500px;
+            color: #d1d5db;
+        }
 
-        .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 700; cursor:pointer; }
-        .btn-primary { background:#3b82f6; color:#fff; }
-        .btn-danger  { background:#ef4444; color:#fff; }
+        .btn {
+            padding: 12px 28px;
+            border-radius: 4px;
+            border: none;
+            font-weight: 600;
+            cursor:pointer;
+            font-size: 1em;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background-color: var(--color-primary-accent);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+        }
+        .btn-primary:hover {
+            background-color: #047857;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(5, 150, 105, 0.4);
+        }
+
+        .btn-danger  {
+            background-color: var(--color-secondary-accent);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+        }
+        .btn-danger:hover {
+            background-color: #b91c1c;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(220, 38, 38, 0.4);
+        }
 
         #distance-status {
-            font-size: 1.05em;
-            margin: 12px 0;
-            padding: 10px 12px;
-            border-radius: 10px;
+            font-size: 0.95em;
+            margin: 15px 0;
+            padding: 8px 16px;
+            border-radius: 4px;
             font-weight: 700;
             display:inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            border-left: 5px solid;
         }
-        #distance-status.good { background:#10b981;color:#fff;border-color:#059669; }
-        #distance-status.close { background:#f59e0b;color:#374151;border-color:#d97706; }
-        #distance-status.far { background:#ef4444;color:#fff;border-color:#dc2626; }
 
-        #gaze-point { position:absolute; width:30px; height:30px; border-radius:50%; background:#ef4444; transform:translate(-50%,-50%); display:none; z-index:6; box-shadow:0 0 15px rgba(239,68,68,0.85); }
+        #distance-status.good { background-color: #ecfdf5; color: #065f46; border-color: #059669; }
+        #distance-status.close { background-color: #fffbeb; color: #92400e; border-color: #f59e0b; }
+        #distance-status.far { background-color: #fef2f2; color: #991b1b; border-color: #ef4444; }
 
-        #calibration-parameters { margin-top: 18px; }
+
+        #gaze-point {
+            position:absolute;
+            width:25px; height:25px;
+            border-radius:50%;
+            background:var(--color-secondary-accent);
+            transform:translate(-50%,-50%);
+            display:none;
+            z-index:6;
+            box-shadow:0 0 12px var(--color-secondary-accent);
+        }
 
         #dot-stage {
             position: fixed;
@@ -104,57 +178,51 @@
         }
 
         #cal-dot {
-            position: absolute;
             width: 30px; height: 30px;
             border-radius: 50%;
-            background: #ef4444;
-            box-shadow: 0 0 18px rgba(239,68,68,0.85), 0 0 45px rgba(239,68,68,0.12);
+            background: #ff0000;
+            box-shadow: 0 0 10px #bf4242, 0 0 30px rgba(255, 255, 255, 0.4);
+            position: absolute;
             transform: translate(-50%,-50%);
             opacity: 0;
             will-change: left, top, transform, opacity;
         }
-        .pulse { animation: pulseScale 1100ms infinite cubic-bezier(.2,.85,.32,1); }
+        .pulse { animation: pulseScale 1000ms infinite cubic-bezier(.2,.85,.32,1); }
         @keyframes pulseScale {
             0% { transform: translate(-50%,-50%) scale(1); }
-            45% { transform: translate(-50%,-50%) scale(0.84); }
+            50% { transform: translate(-50%,-50%) scale(0.88); }
             100% { transform: translate(-50%,-50%) scale(1); }
         }
 
-        #fs-warning {
-            position: absolute;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            pointer-events: none;
-        }
         #fs-warning .panel {
-            pointer-events: auto;
-            width: min(720px, 90%);
-            max-width: 880px;
-            background: rgba(0,0,0,0.65);
+            width: min(650px, 90%);
+            background: var(--color-primary-dark);
             color: #fff;
-            padding: 28px;
-            border-radius: 12px;
+            padding: 30px;
+            border-radius: 6px;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            border-bottom: 4px solid var(--color-secondary-accent);
         }
-        #fs-warning h3 { margin: 0 0 8px 0; font-size: 1.4rem; }
-        #fs-warning p { margin: 6px 0 0 0; font-size: 1rem; color: #f3f4f6; }
+        #fs-warning h3 { margin: 0 0 8px 0; font-size: 1.6rem; font-weight: 700; color: #fff; }
+        #fs-warning p { margin: 6px 0 0 0; font-size: 1.0rem; color: #ccc; }
 
-        @media (max-width:640px) {
-            .calibration-card { padding: 20px; }
-            .video-container { height: 280px; }
-            #fs-warning .panel { padding: 18px; }
+        @media (max-width:768px) {
+            .calibration-card { padding: 25px; }
+            .video-container { height: auto; padding-top: 56.25%; margin-bottom: 20px; }
+            h2 { font-size: 2em; }
+            .instruction-text { margin-bottom: 20px; }
+            .btn { padding: 10px 18px; font-size: 0.9em; }
         }
     </style>
 </head>
 <body>
 <div class="calibration-card">
     <section id="calibration-screen">
-        <h2>Gaze Calibration with Distance Check</h2>
-        <p class="instruction-text">Step 1: Distance Check. Click 'Start Check' to find the optimal distance (≈ 40–100 cm). When distance is OK, start the fullscreen dot calibration.</p>
+        <h2>Gaze Calibration Setup</h2>
+        <p class="instruction-text">
+            Step 1: Distance Check. Initiate the check to confirm optimal distance (40–100 cm). Maintaining this range is critical for accurate calibration results.
+        </p>
 
         <div class="video-container">
             <video id="calibration-video" autoplay playsinline muted></video>
@@ -163,21 +231,22 @@
             <div id="gaze-point"></div>
 
             <div id="distance-overlay" class="">
-                <p id="overlay-status-text">Ready</p>
-                <p id="overlay-instructions">Position your face so it is fully visible. Click 'Start Check' to begin.</p>
-                <div style="display:flex;gap:12px;align-items:center;">
+                <p id="overlay-status-text">SYSTEM INACTIVE</p>
+                <p id="overlay-instructions">Click 'Start Check' to activate the camera and begin distance monitoring. Please keep your face centered in the video feed.</p>
+                <div style="display:flex;gap:20px;align-items:center;margin-top:10px;">
                     <button id="start-calibration-btn" class="btn btn-primary">Start Check</button>
-                    <button id="close-overlay-btn" class="btn btn-primary" style="display:none">Close Window & Start Calibration</button>
+                    <button id="close-overlay-btn" class="btn btn-primary" style="display:none">Proceed to Calibration</button>
                 </div>
             </div>
         </div>
 
-        <p id="distance-status">Initializing...</p>
-        <div style="display:flex;justify-content:center;margin-top:8px;">
-            <button id="stop-calibration-btn" class="btn btn-danger" style="display:none">Stop</button>
+        <p id="distance-status">STATUS: AWAITING START</p>
+        <div style="display:flex;justify-content:center;margin-top:15px;">
+            <button id="stop-calibration-btn" class="btn btn-danger" style="display:none">Stop Check</button>
         </div>
 
-        <div id="calibration-parameters"></div>
+        <div id="calibration-parameters">
+        </div>
     </section>
 </div>
 
@@ -186,8 +255,8 @@
 
     <div id="fs-warning" aria-hidden="true">
         <div class="panel">
-            <h3>Incorrect distance — please reposition</h3>
-            <p>Please move to the optimal distance (≈ 40–100 cm). Calibration will restart automatically once distance is correct.</p>
+            <h3>DISTANCE FAILURE</h3>
+            <p>User is outside the required range. Please adjust your distance (40–100 cm). Monitoring will resume automatically.</p>
         </div>
     </div>
 </div>
