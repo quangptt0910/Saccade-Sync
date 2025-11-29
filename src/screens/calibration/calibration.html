@@ -66,7 +66,7 @@
             overflow: hidden;
             border: 1px solid #e5e7eb;
             background-color: #000;
-            height: 393.75px; /* 16:9 for 700px width */
+            height: 393.75px;
         }
 
         #calibration-video,
@@ -237,14 +237,7 @@
             }
         }
 
-        #fs-warning {
-            position: fixed;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        }
+        #fs-warning { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 10000; }
 
         #fs-warning .panel {
             width: min(650px, 90%);
@@ -259,96 +252,64 @@
             transition: opacity 0.3s ease-in-out;
         }
 
-        #fs-warning h3 {
-            margin: 0 0 8px 0;
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        #fs-warning p {
-            margin: 6px 0 0 0;
-            font-size: 1.0rem;
-            color: #ccc;
-        }
-
-        .hidden {
-            visibility: hidden;
-            opacity: 0;
-            transition: visibility 0s 0.3s, opacity 0.3s linear;
-        }
+        #fs-warning h3 { margin: 0 0 8px 0; font-size: 1.6rem; font-weight: 700; color: #fff; }
+        #fs-warning p { margin: 6px 0 0 0; font-size: 1.0rem; color: #ccc; }
 
         @media (max-width: 768px) {
-            .calibration-card {
-                padding: 25px;
-            }
-            .video-container {
-                height: 0;
-                padding-top: 56.25%;
-                margin-bottom: 20px;
-            }
-            #calibration-video,
-            #calibration-canvas,
-            #distance-overlay {
-                position: absolute;
-                top: 0;
-                left: 0;
-            }
-            h2 {
-                font-size: 2em;
-            }
-            .instruction-text {
-                margin-bottom: 20px;
-            }
-            .btn {
-                padding: 10px 18px;
-                font-size: 0.9em;
-            }
+            .calibration-card { padding: 25px; }
+            .video-container { height: 0; padding-top: 56.25%; margin-bottom: 20px; }
+            h2 { font-size: 2em; }
+            .instruction-text { margin-bottom: 20px; }
+            .btn { padding: 10px 18px; font-size: 0.9em; }
         }
     </style>
 </head>
+
 <body>
 <div class="calibration-card">
-    <section id="calibration-screen">
-        <h2>Gaze Calibration Setup</h2>
-        <p class="instruction-text">
-            Step 1: Distance Check. Initiate the check to confirm optimal distance (40–100 cm). Maintaining this range is critical for accurate calibration results.
-        </p>
 
-        <div class="video-container">
-            <video id="calibration-video" autoplay playsinline muted></video>
-            <canvas id="calibration-canvas" width="640" height="360"></canvas>
+    <h2>Gaze Calibration Setup</h2>
+    <p class="instruction-text">
+        Step 1: Distance Check. Initiate the check to confirm optimal distance (40–100 cm).
+    </p>
 
-            <div id="gaze-point"></div>
+    <div class="video-container">
+        <video id="calibration-video" autoplay playsinline muted></video>
+        <canvas id="calibration-canvas" width="640" height="360"></canvas>
+        <div id="gaze-point"></div>
 
-            <div id="distance-overlay">
-                <p id="overlay-status-text">SYSTEM INACTIVE</p>
-                <p id="overlay-instructions">
-                    Click 'Start Check' to activate the camera and begin distance monitoring. Please keep your face centered in the video feed.
-                </p>
-                <div style="display:flex;gap:20px;align-items:center;margin-top:10px;">
-                    <button id="start-calibration-btn" class="btn btn-primary">Start Check</button>
-                    <button id="close-overlay-btn" class="btn btn-primary" style="display:none">Proceed to Calibration</button>
-                </div>
+        <div id="distance-overlay">
+            <p id="overlay-status-text">SYSTEM INACTIVE</p>
+            <p id="overlay-instructions">Click 'Start Check' to activate the camera and begin distance monitoring.</p>
+
+            <div style="display:flex;gap:20px;align-items:center;margin-top:10px;">
+                <button id="start-calibration-btn" class="btn btn-primary">Start Check</button>
+
+                <!-- NEW: Run Calibration button replaces the Proceed button -->
+                <button id="run-calibration-btn-overlay"
+                        class="btn btn-primary"
+                        style="display:none;">
+                    Run Calibration
+                </button>
             </div>
         </div>
+    </div>
 
-        <p id="distance-status">STATUS: AWAITING START</p>
-        <div style="display:flex;justify-content:center;gap:10px;margin-top:15px;">
-            <button id="stop-calibration-btn" class="btn btn-danger" style="display:none">Stop Check</button>
-            <button id="run-calibration-btn" class="btn btn-primary">Run Calibration</button>
-        </div>
-        <div id="calibration-parameters" style="margin-top: 30px; text-align: left;"></div>
-    </section>
+    <p id="distance-status">STATUS: AWAITING START</p>
+
+    <!-- Stop Check only -->
+    <button id="stop-calibration-btn" class="btn btn-danger" style="display:none">Stop Check</button>
+
+    <div id="calibration-parameters" style="margin-top: 30px; text-align: left;"></div>
 </div>
 
-<div id="dot-stage" aria-hidden="true">
-    <div id="cal-dot" aria-hidden="true"></div>
+<div id="dot-stage">
+    <div id="cal-dot"></div>
 
-    <div id="fs-warning" aria-hidden="true">
+    <div id="fs-warning">
         <div class="panel">
             <h3>DISTANCE FAILURE</h3>
-            <p>User is outside the required range. Please adjust your distance (40–100 cm). Monitoring will resume automatically.</p>
+            <p>User is outside the required range. Please adjust your distance.</p>
         </div>
     </div>
 </div>

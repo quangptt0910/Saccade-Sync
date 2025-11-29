@@ -9,10 +9,11 @@ const statusEl = document.getElementById("distance-status");
 const startBtn = document.getElementById("start-calibration-btn");
 const stopBtn = document.getElementById("stop-calibration-btn");
 
+const runCalibOverlayBtn = document.getElementById("run-calibration-btn-overlay");
+
 const distanceOverlay = document.getElementById("distance-overlay");
 const overlayStatusText = document.getElementById("overlay-status-text");
 const overlayInstructions = document.getElementById("overlay-instructions");
-const closeOverlayBtn = document.getElementById("close-overlay-btn");
 
 const gazePointEl = document.getElementById("gaze-point");
 const parameterDisplay = document.getElementById("calibration-parameters");
@@ -25,7 +26,6 @@ const fsWarningPanel = fsWarning.querySelector(".panel");
 let faceLandmarker = null;
 let runningCamera = false;
 let lastVideoTime = -1;
-let isPreChecking = false;
 let distanceOK = false;
 let abortDot = false;
 let runningDot = false;
@@ -87,7 +87,11 @@ function computeEyeDistance(landmarks) {
 function handleDistanceState(landmarks) {
     if (!landmarks) {
         distanceOK = false;
-        closeOverlayBtn.style.display = "none";
+        if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
+        overlayStatusText.textContent = "NO FACE DETECTED";
+        overlayInstructions.textContent = "Please center your face in the video feed.";
+        statusEl.textContent = "No face detected.";
+        statusEl.className = "";
         return false;
     }
 
@@ -95,7 +99,7 @@ function handleDistanceState(landmarks) {
 
     if (d <= DISTANCE_FAR_THRESHOLD) {
         distanceOK = false;
-        closeOverlayBtn.style.display = "none";
+        if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
         overlayStatusText.textContent = "TOO FAR";
         overlayInstructions.textContent = "Please move closer (≈ 40–100 cm).";
         statusEl.textContent = "Distance Alert: TOO FAR! Move closer.";
@@ -105,7 +109,7 @@ function handleDistanceState(landmarks) {
 
     if (d >= DISTANCE_CLOSE_THRESHOLD) {
         distanceOK = false;
-        closeOverlayBtn.style.display = "none";
+        if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
         overlayStatusText.textContent = "TOO CLOSE";
         overlayInstructions.textContent = "Please move back (≈ 40–100 cm).";
         statusEl.textContent = "Distance Alert: TOO CLOSE! Move back.";
@@ -115,16 +119,14 @@ function handleDistanceState(landmarks) {
 
     distanceOK = true;
 
-    if (isPreChecking) {
-        overlayStatusText.textContent = "DISTANCE CORRECT";
-        overlayInstructions.textContent =
-            "Keep your head still and click 'Proceed to Calibration'.";
-        closeOverlayBtn.style.display = "inline-block";
-        statusEl.textContent = "DISTANCE CORRECT";
-        statusEl.className = "good";
-    } else {
-        statusEl.textContent = "Distance OK";
-        statusEl.className = "good";
+    overlayStatusText.textContent = "DISTANCE CORRECT";
+    overlayInstructions.textContent = "When ready, click 'Run Calibration' to begin.";
+    statusEl.textContent = "Distance OK";
+    statusEl.className = "good";
+
+    if (runCalibOverlayBtn) {
+        runCalibOverlayBtn.style.display = "inline-block";
+        runCalibOverlayBtn.disabled = false;
     }
 
     return true;
@@ -177,12 +179,11 @@ async function startDistanceCheck() {
     if (runningCamera) return;
 
     runningCamera = true;
-    isPreChecking = true;
     distanceOK = false;
 
     startBtn.style.display = "none";
     stopBtn.style.display = "inline-block";
-    closeOverlayBtn.style.display = "none";
+    if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
     distanceOverlay.classList.remove("hide");
 
     overlayStatusText.textContent = "Starting camera...";
@@ -209,7 +210,7 @@ async function startDistanceCheck() {
         stopBtn.style.display = "none";
 
         distanceOverlay.classList.remove("hide");
-        closeOverlayBtn.style.display = "none";
+        if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
         overlayStatusText.textContent = "Camera Error!";
         overlayInstructions.textContent =
             "Unable to access camera. Please check permissions.";
@@ -229,9 +230,10 @@ function stopDistanceCheck(resetUI = true) {
     video.srcObject = null;
 
     runningCamera = false;
-    isPreChecking = false;
     distanceOK = false;
-    closeOverlayBtn.style.display = "none";
+    abortDot = false;
+    runningDot = false;
+    if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
 
     if (resetUI) {
         startBtn.style.display = "inline-block";
@@ -354,13 +356,18 @@ async function collectSamplesForPoint(point_index, screenX, screenY) {
     }
 }
 
-// Main calibration flow
 async function runDotCalibration() {
     if (runningDot) return;
 
     if (!runningCamera) {
         statusEl.textContent =
             "Camera not active — please run distance check first.";
+        statusEl.className = "far";
+        return;
+    }
+
+    if (!distanceOK) {
+        statusEl.textContent = "Distance not OK — adjust distance and try again.";
         statusEl.className = "far";
         return;
     }
@@ -634,25 +641,17 @@ startBtn.addEventListener("click", () => {
 stopBtn.addEventListener("click", () => {
     stopDistanceCheck();
 });
-closeOverlayBtn.addEventListener("click", () => {
-    distanceOverlay.classList.add("hide");
-    isPreChecking = false;
-    closeOverlayBtn.style.display = "none";
-});
 
-document
-    .getElementById("run-calibration-btn")
-    .addEventListener("click", () => {
+if (runCalibOverlayBtn) {
+    runCalibOverlayBtn.addEventListener("click", () => {
         if (!distanceOK) {
             alert("Distance not OK! Please complete the distance check first.");
             return;
         }
-        if (isPreChecking) {
-            alert("Please click 'Proceed to Calibration' first.");
-            return;
-        }
+        distanceOverlay.classList.add("hide");
         runDotCalibration();
     });
+}
 window.addEventListener("resize", () => {
     if (runningDot) {
         placeDot(window.innerWidth / 2, window.innerHeight / 2, false);
