@@ -9,11 +9,11 @@ const statusEl = document.getElementById("distance-status");
 const startBtn = document.getElementById("start-calibration-btn");
 const stopBtn = document.getElementById("stop-calibration-btn");
 
-const runCalibOverlayBtn = document.getElementById("run-calibration-btn-overlay");
-
 const distanceOverlay = document.getElementById("distance-overlay");
 const overlayStatusText = document.getElementById("overlay-status-text");
 const overlayInstructions = document.getElementById("overlay-instructions");
+
+const runCalibBtnOverlay = document.getElementById("run-calibration-btn-overlay");
 
 const gazePointEl = document.getElementById("gaze-point");
 const parameterDisplay = document.getElementById("calibration-parameters");
@@ -26,9 +26,10 @@ const fsWarningPanel = fsWarning.querySelector(".panel");
 let faceLandmarker = null;
 let runningCamera = false;
 let lastVideoTime = -1;
+
 let distanceOK = false;
-let abortDot = false;
 let runningDot = false;
+let abortDot = false;
 
 const DISTANCE_FAR_THRESHOLD = 0.12;
 const DISTANCE_CLOSE_THRESHOLD = 0.20;
@@ -50,6 +51,7 @@ const TRANSITION_MS = 650;
 const WAIT_AFTER = 200;
 const SAMPLES_PER_POINT = 15;
 const SAMPLE_INTERVAL_MS = 200;
+
 let calibrationModel = null;
 
 function easeOutCubic(t) {
@@ -62,9 +64,11 @@ function sleep(ms) {
 
 async function initFaceLandmarker() {
     statusEl.textContent = "Loading AI model...";
+
     const resolver = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
     );
+
     faceLandmarker = await FaceLandmarker.createFromOptions(resolver, {
         baseOptions: {
             modelAssetPath:
@@ -74,8 +78,8 @@ async function initFaceLandmarker() {
         runningMode: "VIDEO",
         numFaces: 1
     });
+
     statusEl.textContent = "Model ready. Click 'Start Check'.";
-    statusEl.className = "";
 }
 
 function computeEyeDistance(landmarks) {
@@ -87,11 +91,7 @@ function computeEyeDistance(landmarks) {
 function handleDistanceState(landmarks) {
     if (!landmarks) {
         distanceOK = false;
-        if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
-        overlayStatusText.textContent = "NO FACE DETECTED";
-        overlayInstructions.textContent = "Please center your face in the video feed.";
-        statusEl.textContent = "No face detected.";
-        statusEl.className = "";
+        runCalibBtnOverlay.style.display = "none";
         return false;
     }
 
@@ -99,35 +99,38 @@ function handleDistanceState(landmarks) {
 
     if (d <= DISTANCE_FAR_THRESHOLD) {
         distanceOK = false;
-        if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
+
+        runCalibBtnOverlay.style.display = "none";
         overlayStatusText.textContent = "TOO FAR";
-        overlayInstructions.textContent = "Please move closer (≈ 40–100 cm).";
-        statusEl.textContent = "Distance Alert: TOO FAR! Move closer.";
+        overlayInstructions.textContent = "Move closer (≈ 40–100 cm).";
+
+        statusEl.textContent = "Distance Alert: TOO FAR!";
         statusEl.className = "far";
         return false;
     }
 
     if (d >= DISTANCE_CLOSE_THRESHOLD) {
         distanceOK = false;
-        if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
+
+        runCalibBtnOverlay.style.display = "none";
         overlayStatusText.textContent = "TOO CLOSE";
-        overlayInstructions.textContent = "Please move back (≈ 40–100 cm).";
-        statusEl.textContent = "Distance Alert: TOO CLOSE! Move back.";
+        overlayInstructions.textContent = "Move back (≈ 40–100 cm).";
+
+        statusEl.textContent = "Distance Alert: TOO CLOSE!";
         statusEl.className = "close";
         return false;
     }
 
     distanceOK = true;
 
-    overlayStatusText.textContent = "DISTANCE CORRECT";
-    overlayInstructions.textContent = "When ready, click 'Run Calibration' to begin.";
+    runCalibBtnOverlay.style.display = "inline-block";
+
+    overlayStatusText.textContent = "DISTANCE OK";
+    overlayInstructions.textContent =
+        "Click Run Calibration to begin calibration.";
+
     statusEl.textContent = "Distance OK";
     statusEl.className = "good";
-
-    if (runCalibOverlayBtn) {
-        runCalibOverlayBtn.style.display = "inline-block";
-        runCalibOverlayBtn.disabled = false;
-    }
 
     return true;
 }
@@ -146,8 +149,10 @@ function cameraLoop() {
     }
 
     const results = faceLandmarker.detectForVideo(video, performance.now());
+
     if (!results || !results.faceLandmarks || results.faceLandmarks.length === 0) {
         handleDistanceState(null);
+
         if (runningDot && !abortDot) {
             abortDot = true;
             showFsWarning();
@@ -163,17 +168,6 @@ function cameraLoop() {
         showFsWarning();
     }
 }
-function showFsWarning() {
-    fsWarning.style.display = "flex";
-    fsWarningPanel.style.opacity = "1";
-    calDot.style.opacity = "0";
-    calDot.classList.remove("pulse");
-}
-
-function hideFsWarning() {
-    fsWarning.style.display = "none";
-    fsWarningPanel.style.opacity = "0";
-}
 
 async function startDistanceCheck() {
     if (runningCamera) return;
@@ -183,13 +177,13 @@ async function startDistanceCheck() {
 
     startBtn.style.display = "none";
     stopBtn.style.display = "inline-block";
-    if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
+
+    runCalibBtnOverlay.style.display = "none";
     distanceOverlay.classList.remove("hide");
 
     overlayStatusText.textContent = "Starting camera...";
     overlayInstructions.textContent = "Waiting for video stream...";
-    statusEl.textContent = "Performing Distance Check...";
-    statusEl.className = "";
+    statusEl.textContent = "Performing distance check...";
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -209,15 +203,12 @@ async function startDistanceCheck() {
         startBtn.style.display = "inline-block";
         stopBtn.style.display = "none";
 
-        distanceOverlay.classList.remove("hide");
-        if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
         overlayStatusText.textContent = "Camera Error!";
         overlayInstructions.textContent =
-            "Unable to access camera. Please check permissions.";
+            "Unable to access camera. Check permissions.";
 
         statusEl.textContent = "Camera error.";
         statusEl.className = "far";
-
         console.error("Camera error:", err);
     }
 }
@@ -231,9 +222,8 @@ function stopDistanceCheck(resetUI = true) {
 
     runningCamera = false;
     distanceOK = false;
-    abortDot = false;
-    runningDot = false;
-    if (runCalibOverlayBtn) runCalibOverlayBtn.style.display = "none";
+
+    runCalibBtnOverlay.style.display = "none";
 
     if (resetUI) {
         startBtn.style.display = "inline-block";
@@ -255,24 +245,16 @@ function getDotPoints() {
         Math.min(200, Math.round(Math.min(w, h) * 0.08))
     );
 
-    const left = margin;
-    const right = w - margin;
-    const top = margin;
-    const bottom = h - margin;
-
-    const cx = Math.round(w / 2);
-    const cy = Math.round(h / 2);
-
     return [
-        { x: left, y: top },
-        { x: cx, y: top },
-        { x: right, y: top },
-        { x: left, y: cy },
-        { x: cx, y: cy },
-        { x: right, y: cy },
-        { x: left, y: bottom },
-        { x: cx, y: bottom },
-        { x: right, y: bottom }
+        { x: margin, y: margin },
+        { x: w / 2, y: margin },
+        { x: w - margin, y: margin },
+        { x: margin, y: h / 2 },
+        { x: w / 2, y: h / 2 },
+        { x: w - margin, y: h / 2 },
+        { x: margin, y: h - margin },
+        { x: w / 2, y: h - margin },
+        { x: w - margin, y: h - margin }
     ];
 }
 
@@ -280,6 +262,7 @@ function placeDot(x, y, visible = true) {
     calDot.style.left = `${x}px`;
     calDot.style.top = `${y}px`;
     calDot.style.opacity = visible ? "1" : "0";
+
     if (visible) {
         calDot.classList.add("pulse");
     } else {
@@ -298,26 +281,25 @@ function animateDotTo(tx, ty, duration = TRANSITION_MS) {
 
             const t = Math.min(1, (now - t0) / duration);
             const e = easeOutCubic(t);
-            const x = startX + (tx - startX) * e;
-            const y = startY + (ty - startY) * e;
 
-            placeDot(x, y, true);
+            placeDot(
+                startX + (tx - startX) * e,
+                startY + (ty - startY) * e,
+                true
+            );
 
-            if (t < 1) {
-                requestAnimationFrame(step);
-            } else {
-                resolve();
-            }
+            if (t < 1) requestAnimationFrame(step);
+            else resolve();
         }
 
         requestAnimationFrame(step);
     });
 }
 
-async function collectSamplesForPoint(point_index, screenX, screenY) {
-    let samplesCollected = 0;
+async function collectSamplesForPoint(idx, screenX, screenY) {
+    let count = 0;
 
-    while (samplesCollected < SAMPLES_PER_POINT) {
+    while (count < SAMPLES_PER_POINT) {
         if (!runningDot || abortDot) break;
         if (!distanceOK) {
             abortDot = true;
@@ -326,30 +308,25 @@ async function collectSamplesForPoint(point_index, screenX, screenY) {
 
         const results = faceLandmarker.detectForVideo(video, performance.now());
 
-        if (results && results.faceLandmarks && results.faceLandmarks.length > 0) {
+        if (results?.faceLandmarks?.length > 0) {
             const landmarks = results.faceLandmarks[0];
+            const iris = landmarks.slice(468, 474);
 
-            const irisPoints = landmarks.slice(468, 474);
-            const centerX =
-                irisPoints.reduce((acc, pt) => acc + pt.x, 0) / irisPoints.length;
-            const centerY =
-                irisPoints.reduce((acc, pt) => acc + pt.y, 0) / irisPoints.length;
-
+            const cx = iris.reduce((a, p) => a + p.x, 0) / iris.length;
+            const cy = iris.reduce((a, p) => a + p.y, 0) / iris.length;
             const radius =
-                irisPoints.reduce(
-                    (acc, pt) => acc + Math.hypot(pt.x - centerX, pt.y - centerY),
-                    0
-                ) / irisPoints.length;
+                iris.reduce((a, p) => a + Math.hypot(p.x - cx, p.y - cy), 0) /
+                iris.length;
 
             gazeData.push({
-                point_index,
+                point_index: idx,
                 targetX: screenX,
                 targetY: screenY,
-                iris_center: { x: centerX, y: centerY },
+                iris_center: { x: cx, y: cy },
                 iris_radius: radius
             });
 
-            samplesCollected++;
+            count++;
         }
 
         await sleep(SAMPLE_INTERVAL_MS);
@@ -357,18 +334,13 @@ async function collectSamplesForPoint(point_index, screenX, screenY) {
 }
 
 async function runDotCalibration() {
-    if (runningDot) return;
-
     if (!runningCamera) {
-        statusEl.textContent =
-            "Camera not active — please run distance check first.";
-        statusEl.className = "far";
+        alert("Start distance check first.");
         return;
     }
 
     if (!distanceOK) {
-        statusEl.textContent = "Distance not OK — adjust distance and try again.";
-        statusEl.className = "far";
+        alert("Stay in correct distance to start calibration.");
         return;
     }
 
@@ -376,46 +348,41 @@ async function runDotCalibration() {
         if (!document.fullscreenElement) {
             await document.documentElement.requestFullscreen();
         }
-    } catch (e) {
-        console.warn("Fullscreen request failed (may be blocked):", e);
+    } catch (err) {
+        console.warn("Fullscreen blocked.");
     }
 
     dotStage.style.display = "flex";
     video.classList.add("hidden");
     canvas.classList.add("hidden");
 
-    const screenPoints = getDotPoints();
+    const points = getDotPoints();
 
     abortDot = false;
     runningDot = true;
     gazeData = [];
 
-    placeDot(window.innerWidth / 2, window.innerHeight / 2, false);
-    await sleep(120);
     placeDot(window.innerWidth / 2, window.innerHeight / 2, true);
+    await sleep(200);
 
-    for (let i = 0; i < screenPoints.length; i++) {
-        if (!runningDot || abortDot) break;
-
+    for (let i = 0; i < points.length; i++) {
+        if (abortDot) break;
         if (!distanceOK) {
             abortDot = true;
             break;
         }
 
-        const p = screenPoints[i];
+        const p = points[i];
 
         await animateDotTo(p.x, p.y, TRANSITION_MS);
         if (abortDot) break;
 
         placeDot(p.x, p.y, true);
-
         await collectSamplesForPoint(
             i,
             p.x / window.innerWidth,
             p.y / window.innerHeight
         );
-
-        if (abortDot) break;
 
         calDot.style.transform = "translate(-50%,-50%) scale(0.85)";
         await sleep(120);
@@ -429,23 +396,40 @@ async function runDotCalibration() {
 
     if (abortDot) {
         showFsWarning();
-    } else {
-        hideFsWarning();
-        dotStage.style.display = "none";
-        video.classList.remove("hidden");
-        canvas.classList.remove("hidden");
-
-        displayCalibrationParameters();
-        displayPredictionModel();
+        return;
     }
+
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+    }
+
+    hideFsWarning();
+    dotStage.style.display = "none";
+    video.classList.remove("hidden");
+    canvas.classList.remove("hidden");
+
+    displayCalibrationParameters();
+    displayPredictionModel();
+}
+
+function showFsWarning() {
+    fsWarning.style.display = "flex";
+    fsWarningPanel.style.opacity = "1";
+    calDot.style.opacity = "0";
+    calDot.classList.remove("pulse");
+}
+
+function hideFsWarning() {
+    fsWarning.style.display = "none";
+    fsWarningPanel.style.opacity = "0";
 }
 
 function displayCalibrationParameters() {
-    const grouped = CALIBRATION_POINTS.map((point, idx) => {
-        const samples = gazeData.filter(d => d.point_index === idx);
-        if (samples.length === 0) {
+    const grouped = CALIBRATION_POINTS.map((p, i) => {
+        const samples = gazeData.filter(s => s.point_index === i);
+        if (!samples.length) {
             return {
-                label: point.label,
+                label: p.label,
                 count: 0,
                 avg_iris: { x: "N/A", y: "N/A", radius: "N/A" }
             };
@@ -462,7 +446,7 @@ function displayCalibrationParameters() {
         );
 
         return {
-            label: point.label,
+            label: p.label,
             count: samples.length,
             avg_iris: {
                 x: (avg.x / samples.length).toFixed(4),
@@ -474,71 +458,71 @@ function displayCalibrationParameters() {
 
     parameterDisplay.innerHTML = `
     <h3>Calibration Data Samples</h3>
-    <table border="1" cellpadding="5" cellspacing="0" style="margin:auto; width: 100%; max-width: 600px; border-collapse: collapse; text-align: center;">
+    <table border="1" style="width:100%;max-width:600px;margin:auto;text-align:center;">
       <thead>
         <tr>
-          <th>Target Point</th>
-          <th>Samples</th>
-          <th>Avg Iris X</th>
-          <th>Avg Iris Y</th>
-          <th>Avg Iris Radius</th>
+            <th>Point</th>
+            <th>Samples</th>
+            <th>Iris X</th>
+            <th>Iris Y</th>
+            <th>Iris Radius</th>
         </tr>
       </thead>
       <tbody>
         ${grouped
         .map(
             p => `
-          <tr>
+        <tr>
             <td>${p.label}</td>
             <td>${p.count}</td>
             <td>${p.avg_iris.x}</td>
             <td>${p.avg_iris.y}</td>
             <td>${p.avg_iris.radius}</td>
-          </tr>`
+        </tr>
+        `
         )
         .join("")}
       </tbody>
     </table>
-    <p style="color:#6b7280;margin-top:8px;font-size:0.9em; text-align: center;">
-      These values are used for personalized gaze detection calibration.
-    </p>`;
+    `;
 }
 
 function transpose(m) {
-    return m[0].map((_, i) => m.map(row => row[i]));
+    return m[0].map((_, i) => m.map(r => r[i]));
 }
 
 function multiply(a, b) {
     const result = [];
+
     for (let i = 0; i < a.length; i++) {
         result[i] = [];
         for (let j = 0; j < b[0].length; j++) {
             let sum = 0;
+
             for (let k = 0; k < b.length; k++) {
                 sum += a[i][k] * b[k][j];
             }
+
             result[i][j] = sum;
         }
     }
+
     return result;
 }
+
 function invert3x3(m) {
-    const a = m[0][0],
-        b = m[0][1],
-        c = m[0][2];
-    const d = m[1][0],
-        e = m[1][1],
-        f = m[1][2];
-    const g = m[2][0],
-        h = m[2][1],
-        i = m[2][2];
+    const a = m[0][0], b = m[0][1], c = m[0][2];
+    const d = m[1][0], e = m[1][1], f = m[1][2];
+    const g = m[2][0], h = m[2][1], i = m[2][2];
 
     const A = e * i - f * h;
     const B = c * h - b * i;
     const C = b * f - c * e;
+
     const D = f * g - d * i;
     const E = a * i - c * g;
     const F = c * d - a * f;
+
     const G = d * h - e * g;
     const H = b * g - a * h;
     const I = a * e - b * d;
@@ -547,6 +531,7 @@ function invert3x3(m) {
     if (Math.abs(det) < 1e-12) return null;
 
     const invDet = 1 / det;
+
     return [
         [A * invDet, B * invDet, C * invDet],
         [D * invDet, E * invDet, F * invDet],
@@ -561,16 +546,16 @@ function leastSquares(A, b) {
         AT,
         b.map(v => [v])
     );
+
     const ATA_inv = invert3x3(ATA);
     if (!ATA_inv) return null;
-    const x = multiply(ATA_inv, ATb);
-    return x.map(row => row[0]);
+
+    return multiply(ATA_inv, ATb).map(r => r[0]);
 }
 
 function displayPredictionModel() {
     if (gazeData.length < 3) {
-        parameterDisplay.innerHTML +=
-            `<p>Insufficient data for model fitting (need at least 3 samples).</p>`;
+        parameterDisplay.innerHTML += `<p>Not enough samples for fitting model.</p>`;
         return;
     }
 
@@ -584,52 +569,40 @@ function displayPredictionModel() {
         by.push(d.targetY);
     });
 
-    const paramsX = leastSquares(A, bx);
-    const paramsY = leastSquares(A, by);
+    const px = leastSquares(A, bx);
+    const py = leastSquares(A, by);
 
-    if (!paramsX || !paramsY) {
-        parameterDisplay.innerHTML +=
-            `<p style="text-align:center;">Model fitting failed (singular matrix).</p>`;
+    if (!px || !py) {
+        parameterDisplay.innerHTML += `<p>Matrix inversion failed.</p>`;
         return;
     }
+
     calibrationModel = {
-        a: paramsX[0],
-        b: paramsX[1],
-        c: paramsX[2],
-        d: paramsY[0],
-        e: paramsY[1],
-        f: paramsY[2]
+        a: px[0],
+        b: px[1],
+        c: px[2],
+        d: py[0],
+        e: py[1],
+        f: py[2]
     };
+
     parameterDisplay.innerHTML += `
-    <h3>Calibration Affine Transform Model</h3>
-    <p style="text-align: center; font-size: 0.9em; color:#6b7280; margin-bottom: 5px;">
-      ScreenX = a * IrisX + b * IrisY + c<br>
-      ScreenY = d * IrisX + e * IrisY + f
-    </p>
-    <table border="1" cellpadding="5" cellspacing="0" style="margin:auto; width: 100%; max-width: 600px; border-collapse: collapse; text-align: left;">
-      <thead>
-        <tr><th>Parameter</th><th>Value</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>a (screenX / irisX)</td><td>${calibrationModel.a.toFixed(6)}</td></tr>
-        <tr><td>b (screenX / irisY)</td><td>${calibrationModel.b.toFixed(6)}</td></tr>
-        <tr><td>c (screenX offset)</td><td>${calibrationModel.c.toFixed(6)}</td></tr>
-        <tr><td>d (screenY / irisX)</td><td>${calibrationModel.d.toFixed(6)}</td></tr>
-        <tr><td>e (screenY / irisY)</td><td>${calibrationModel.e.toFixed(6)}</td></tr>
-        <tr><td>f (screenY offset)</td><td>${calibrationModel.f.toFixed(6)}</td></tr>
-      </tbody>
+    <h3>Affine Model</h3>
+    <p>ScreenX = a*ix + b*iy + c<br>ScreenY = d*ix + e*iy + f</p>
+    <table border="1" style="width:100%;max-width:600px;margin:auto;">
+        <tr><td>a</td><td>${calibrationModel.a.toFixed(6)}</td></tr>
+        <tr><td>b</td><td>${calibrationModel.b.toFixed(6)}</td></tr>
+        <tr><td>c</td><td>${calibrationModel.c.toFixed(6)}</td></tr>
+        <tr><td>d</td><td>${calibrationModel.d.toFixed(6)}</td></tr>
+        <tr><td>e</td><td>${calibrationModel.e.toFixed(6)}</td></tr>
+        <tr><td>f</td><td>${calibrationModel.f.toFixed(6)}</td></tr>
     </table>
-    <p style="color:#6b7280;margin-top:8px;font-size:0.9em; text-align: center;">
-      Use these parameters to predict gaze screen position from iris center coordinates.
-    </p>`;
+    `;
 }
-function predictScreenPosition(irisX, irisY) {
-    if (!calibrationModel) return null;
-    const { a, b, c, d, e, f } = calibrationModel;
-    const screenX = a * irisX + b * irisY + c;
-    const screenY = d * irisX + e * irisY + f;
-    return { screenX, screenY };
-}
+
+runCalibBtnOverlay.addEventListener("click", () => {
+    runDotCalibration();
+});
 
 startBtn.addEventListener("click", () => {
     if (!faceLandmarker) {
@@ -638,23 +611,15 @@ startBtn.addEventListener("click", () => {
         startDistanceCheck();
     }
 });
+
 stopBtn.addEventListener("click", () => {
     stopDistanceCheck();
 });
 
-if (runCalibOverlayBtn) {
-    runCalibOverlayBtn.addEventListener("click", () => {
-        if (!distanceOK) {
-            alert("Distance not OK! Please complete the distance check first.");
-            return;
-        }
-        distanceOverlay.classList.add("hide");
-        runDotCalibration();
-    });
-}
 window.addEventListener("resize", () => {
     if (runningDot) {
         placeDot(window.innerWidth / 2, window.innerHeight / 2, false);
     }
 });
+
 initFaceLandmarker();
