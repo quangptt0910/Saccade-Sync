@@ -5,6 +5,9 @@ const video = document.getElementById("calibration-video");
 const canvas = document.getElementById("calibration-canvas");
 const ctx = canvas.getContext("2d");
 
+const videoContainer = document.querySelector(".video-container");
+const staticPreview = document.getElementById("static-preview");
+
 const statusEl = document.getElementById("distance-status");
 const startBtn = document.getElementById("start-calibration-btn");
 const stopBtn = document.getElementById("stop-calibration-btn");
@@ -55,7 +58,7 @@ const SAMPLE_INTERVAL_MS = 200;
 let calibrationModel = null;
 
 function easeOutCubic(t) {
-    return 1 - Math.pow(1 - t, 3);
+    return 1 - Math.pow(1, 3);
 }
 
 function sleep(ms) {
@@ -92,6 +95,10 @@ function handleDistanceState(landmarks) {
     if (!landmarks) {
         distanceOK = false;
         runCalibBtnOverlay.style.display = "none";
+        overlayStatusText.textContent = "NO FACE";
+        overlayInstructions.textContent = "Position face in view.";
+        statusEl.textContent = "No face detected";
+        statusEl.className = "";
         return false;
     }
 
@@ -99,11 +106,9 @@ function handleDistanceState(landmarks) {
 
     if (d <= DISTANCE_FAR_THRESHOLD) {
         distanceOK = false;
-
         runCalibBtnOverlay.style.display = "none";
         overlayStatusText.textContent = "TOO FAR";
         overlayInstructions.textContent = "Move closer (≈ 40–100 cm).";
-
         statusEl.textContent = "Distance Alert: TOO FAR!";
         statusEl.className = "far";
         return false;
@@ -111,28 +116,46 @@ function handleDistanceState(landmarks) {
 
     if (d >= DISTANCE_CLOSE_THRESHOLD) {
         distanceOK = false;
-
         runCalibBtnOverlay.style.display = "none";
         overlayStatusText.textContent = "TOO CLOSE";
         overlayInstructions.textContent = "Move back (≈ 40–100 cm).";
-
         statusEl.textContent = "Distance Alert: TOO CLOSE!";
         statusEl.className = "close";
         return false;
     }
 
     distanceOK = true;
-
     runCalibBtnOverlay.style.display = "inline-block";
-
     overlayStatusText.textContent = "DISTANCE OK";
     overlayInstructions.textContent =
         "Click Run Calibration to begin calibration.";
-
     statusEl.textContent = "Distance OK";
     statusEl.className = "good";
 
     return true;
+}
+
+function setCanvasSizeToVideo() {
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = Math.round(video.videoWidth * dpr);
+    canvas.height = Math.round(video.videoHeight * dpr);
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    canvas.style.width = `${video.clientWidth}px`;
+    canvas.style.height = `${video.clientHeight}px`;
+}
+
+function adjustVideoContainerHeight() {
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    video.style.width = "100%";
+    video.style.height = "auto";
+
+    videoContainer.style.height = `${video.clientHeight}px`;
 }
 
 function cameraLoop() {
@@ -145,7 +168,16 @@ function cameraLoop() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!video.paused && !video.ended) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dpr = window.devicePixelRatio || 1;
+        ctx.drawImage(
+            video,
+            0, 0,
+            video.videoWidth,
+            video.videoHeight,
+            0, 0,
+            canvas.width / dpr,
+            canvas.height / dpr
+        );
     }
 
     const results = faceLandmarker.detectForVideo(video, performance.now());
@@ -175,11 +207,18 @@ async function startDistanceCheck() {
     runningCamera = true;
     distanceOK = false;
 
-    startBtn.style.display = "none";
+    staticPreview.classList.remove("show-flex");
+    staticPreview.style.display = "none";
+
     stopBtn.style.display = "inline-block";
 
+    video.classList.add("show");
+    canvas.classList.add("show");
+
     runCalibBtnOverlay.style.display = "none";
-    distanceOverlay.classList.remove("hide");
+
+    distanceOverlay.classList.add("show-flex");
+
 
     overlayStatusText.textContent = "Starting camera...";
     overlayInstructions.textContent = "Waiting for video stream...";
@@ -187,21 +226,39 @@ async function startDistanceCheck() {
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480, facingMode: "user" },
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: "user"
+            },
             audio: false
         });
 
         video.srcObject = stream;
-        await video.play();
 
-        canvas.width = 640;
-        canvas.height = 360;
+        await new Promise((resolve) => {
+            const onMeta = () => {
+                video.removeEventListener("loadedmetadata", onMeta);
+                resolve();
+            };
+            video.addEventListener("loadedmetadata", onMeta);
+        });
+
+        adjustVideoContainerHeight();
+        setCanvasSizeToVideo();
+
+        await video.play();
 
         cameraLoop();
     } catch (err) {
         runningCamera = false;
-        startBtn.style.display = "inline-block";
+
+        staticPreview.classList.add("show-flex");
+        staticPreview.style.display = "flex";
+        distanceOverlay.classList.remove("show-flex");
         stopBtn.style.display = "none";
+        video.classList.remove("show");
+        canvas.classList.remove("show");
 
         overlayStatusText.textContent = "Camera Error!";
         overlayInstructions.textContent =
@@ -226,14 +283,23 @@ function stopDistanceCheck(resetUI = true) {
     runCalibBtnOverlay.style.display = "none";
 
     if (resetUI) {
-        startBtn.style.display = "inline-block";
+        staticPreview.classList.add("show-flex");
+        staticPreview.style.display = "flex";
+
         stopBtn.style.display = "none";
-        distanceOverlay.classList.add("hide");
+        distanceOverlay.classList.remove("show-flex");
+
+        video.classList.remove("show");
+        canvas.classList.remove("show");
+
         statusEl.textContent = "STATUS: AWAITING START";
         statusEl.className = "";
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    videoContainer.style.height = "";
+    canvas.style.width = "";
+    canvas.style.height = "";
 }
 
 function getDotPoints() {
@@ -310,6 +376,7 @@ async function collectSamplesForPoint(idx, screenX, screenY) {
 
         if (results?.faceLandmarks?.length > 0) {
             const landmarks = results.faceLandmarks[0];
+            // Use 468-474 for iris points
             const iris = landmarks.slice(468, 474);
 
             const cx = iris.reduce((a, p) => a + p.x, 0) / iris.length;
@@ -353,8 +420,8 @@ async function runDotCalibration() {
     }
 
     dotStage.style.display = "flex";
-    video.classList.add("hidden");
-    canvas.classList.add("hidden");
+    video.classList.remove("show");
+    canvas.classList.remove("show");
 
     const points = getDotPoints();
 
@@ -405,8 +472,8 @@ async function runDotCalibration() {
 
     hideFsWarning();
     dotStage.style.display = "none";
-    video.classList.remove("hidden");
-    canvas.classList.remove("hidden");
+    video.classList.add("show");
+    canvas.classList.add("show");
 
     displayCalibrationParameters();
     displayPredictionModel();
@@ -414,14 +481,14 @@ async function runDotCalibration() {
 
 function showFsWarning() {
     fsWarning.style.display = "flex";
-    fsWarningPanel.style.opacity = "1";
+    if (fsWarningPanel) fsWarningPanel.style.opacity = "1";
     calDot.style.opacity = "0";
     calDot.classList.remove("pulse");
 }
 
 function hideFsWarning() {
     fsWarning.style.display = "none";
-    fsWarningPanel.style.opacity = "0";
+    if (fsWarningPanel) fsWarningPanel.style.opacity = "0";
 }
 
 function displayCalibrationParameters() {
@@ -617,6 +684,11 @@ stopBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("resize", () => {
+    if (runningCamera) {
+        adjustVideoContainerHeight();
+        setCanvasSizeToVideo();
+    }
+
     if (runningDot) {
         placeDot(window.innerWidth / 2, window.innerHeight / 2, false);
     }
