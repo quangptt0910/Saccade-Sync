@@ -8,47 +8,49 @@ export function multiply(a, b) {
         r[i] = [];
         for (let j = 0; j < b[0].length; j++) {
             let sum = 0;
-            for (let k = 0; k < b.length; k++) sum += a[i][k] * b[k][j];
+            for (let k = 0; k < b.length; k++) {
+                sum += a[i][k] * b[k][j];
+            }
             r[i][j] = sum;
         }
     }
     return r;
 }
 
-export function invert3x3(m) {
-    const a = m[0][0], b = m[0][1], c = m[0][2];
-    const d = m[1][0], e = m[1][1], f = m[1][2];
-    const g = m[2][0], h = m[2][1], i = m[2][2];
+export function invert(m) {
+    const n = m.length;
+    const I = m.map((row, i) =>
+        row.map((_, j) => (i === j ? 1 : 0))
+    );
+    const M = m.map(row => row.slice());
 
-    const A = e * i - f * h;
-    const B = c * h - b * i;
-    const C = b * f - c * e;
+    for (let i = 0; i < n; i++) {
+        let diag = M[i][i];
+        if (Math.abs(diag) < 1e-12) return null;
 
-    const D = f * g - d * i;
-    const E = a * i - c * g;
-    const F = c * d - a * f;
+        for (let j = 0; j < n; j++) {
+            M[i][j] /= diag;
+            I[i][j] /= diag;
+        }
 
-    const G = d * h - e * g;
-    const H = b * g - a * h;
-    const I = a * e - b * d;
+        for (let k = 0; k < n; k++) {
+            if (k === i) continue;
+            const f = M[k][i];
+            for (let j = 0; j < n; j++) {
+                M[k][j] -= f * M[i][j];
+                I[k][j] -= f * I[i][j];
+            }
+        }
+    }
 
-    const det = a * A + b * D + c * G;
-    if (Math.abs(det) < 1e-12) return null;
-
-    const inv = 1 / det;
-
-    return [
-        [A * inv, B * inv, C * inv],
-        [D * inv, E * inv, F * inv],
-        [G * inv, H * inv, I * inv]
-    ];
+    return I;
 }
 
 export function leastSquares(A, b) {
     const AT = transpose(A);
     const ATA = multiply(AT, A);
     const ATb = multiply(AT, b.map(v => [v]));
-    const ATA_inv = invert3x3(ATA);
+    const ATA_inv = invert(ATA);
     if (!ATA_inv) return null;
     return multiply(ATA_inv, ATb).map(r => r[0]);
 }

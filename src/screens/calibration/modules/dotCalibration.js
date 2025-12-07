@@ -13,8 +13,14 @@ import { displayCalibrationParameters, displayPredictionModel } from "./display.
 
 export let gazeData = [];
 export let calibrationModel = {
-    a: 0, b: 0, c: 0,
-    d: 0, e: 0, f: 0
+    left: {
+        coefX: [0, 0, 0, 0, 0, 0], // a0..a5
+        coefY: [0, 0, 0, 0, 0, 0]
+    },
+    right: {
+        coefX: [0, 0, 0, 0, 0, 0],
+        coefY: [0, 0, 0, 0, 0, 0]
+    }
 };
 
 export let runningDot = false;
@@ -99,6 +105,25 @@ export function animateDotTo(tx, ty, duration = TRANSITION_MS) {
     });
 }
 
+/**
+ * - right iris: 469..473 (5 points)
+ * - left iris: 474..478 (5 points)
+ * using slices that match these ranges (slice(start, endExclusive)).
+ */
+const RIGHT_IRIS_START = 469; // inclusive
+const RIGHT_IRIS_END = 474;   // exclusive
+const LEFT_IRIS_START = 474;  // inclusive
+const LEFT_IRIS_END = 479;    // exclusive
+
+function computeCenterAndRadius(points) {
+    if (!points || !points.length) return null;
+    const cx = points.reduce((s, p) => s + p.x, 0) / points.length;
+    const cy = points.reduce((s, p) => s + p.y, 0) / points.length;
+    const radius =
+        points.reduce((s, p) => s + Math.hypot(p.x - cx, p.y - cy), 0) / points.length;
+    return { x: cx, y: cy, r: radius };
+}
+
 export async function collectSamplesForPoint(idx, screenX, screenY) {
     let count = 0;
 
@@ -112,19 +137,28 @@ export async function collectSamplesForPoint(idx, screenX, screenY) {
         const r = faceLandmarker.detectForVideo(video, performance.now());
         if (r?.faceLandmarks?.length) {
             const landmarks = r.faceLandmarks[0];
-            const iris = landmarks.slice(468, 474);
-            const cx = iris.reduce((s, p) => s + p.x, 0) / iris.length;
-            const cy = iris.reduce((s, p) => s + p.y, 0) / iris.length;
-            const radius =
-                iris.reduce((s, p) => s + Math.hypot(p.x - cx, p.y - cy), 0) /
-                iris.length;
 
+            // extract right iris landmarks (469..473)
+            const rightIris = landmarks.slice(RIGHT_IRIS_START, RIGHT_IRIS_END);
+            // extract left iris landmarks (474..478)
+            const leftIris = landmarks.slice(LEFT_IRIS_START, LEFT_IRIS_END);
+
+            const left = computeCenterAndRadius(leftIris);
+            const right = computeCenterAndRadius(rightIris);
+
+            // if both are null, skip
+            if (!left && !right) {
+                await sleep(SAMPLE_INTERVAL_MS);
+                continue;
+            }
+
+            // store both (may have one null if occluded)
             gazeData.push({
                 point_index: idx,
                 targetX: screenX,
                 targetY: screenY,
-                iris_center: { x: cx, y: cy },
-                iris_radius: radius
+                iris_left: left,    // {x,y,r} or null
+                iris_right: right   // {x,y,r} or null
             });
 
             count++;
