@@ -117,7 +117,6 @@
             display: flex !important;
         }
 
-
         #calibration-canvas {
             position: absolute;
             top: 0;
@@ -186,20 +185,7 @@
             border-left: 5px solid;
         }
 
-        #stop-calibration-btn { display:none; }
         #run-calibration-btn-overlay { display:none; }
-
-        #gaze-point {
-            position: absolute;
-            width: 25px;
-            height: 25px;
-            border-radius: 50%;
-            background: var(--color-secondary-accent);
-            transform: translate(-50%, -50%);
-            display: none;
-            z-index: 6;
-            box-shadow: 0 0 12px var(--color-secondary-accent);
-        }
 
         #dot-stage {
             position: fixed;
@@ -253,7 +239,7 @@
 
         <div id="static-preview" class="show-flex">
             <h3>CAMERA PREVIEW</h3>
-            <p>Click **'Start Check'** to begin gaze calibration.</p>
+            <p>Click <strong>'Start Check'</strong> to begin gaze calibration.</p>
             <button id="start-calibration-btn" class="btn btn-primary">Start Check</button>
         </div>
 
@@ -263,8 +249,7 @@
 
             <div style="display:flex;gap:20px;margin-top:10px;">
                 <button id="run-calibration-btn-overlay"
-                        class="btn btn-primary"
-                        style="display:none;">
+                        class="btn btn-primary">
                     Run Calibration
                 </button>
             </div>
@@ -273,7 +258,7 @@
 
     <p id="distance-status">STATUS: AWAITING START</p>
 
-    <button id="stop-calibration-btn" class="btn btn-danger">
+    <button id="stop-calibration-btn" class="btn btn-danger" style="display:none;">
         Stop Check
     </button>
 
